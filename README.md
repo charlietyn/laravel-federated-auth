@@ -7,8 +7,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/PHP-%5E8.2-777BB4?style=flat-square&logo=php" alt="PHP 8.2+">
   <img src="https://img.shields.io/badge/Laravel-11%20%7C%2012-FF2D20?style=flat-square&logo=laravel" alt="Laravel 11 or 12">
-  <img src="https://img.shields.io/badge/OAuth2-hardened-blue?style=flat-square" alt="OAuth2 hardened">
-  <img src="https://img.shields.io/badge/OIDC-ready-0A7EA4?style=flat-square" alt="OIDC ready">
+  <img src="https://img.shields.io/badge/OAuth2-state%20hardened-blue?style=flat-square" alt="OAuth2 state hardened">
+  <img src="https://img.shields.io/badge/OIDC-nonce%20%2B%20PKCE-0A7EA4?style=flat-square" alt="OIDC nonce and PKCE">
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License">
 </p>
 
@@ -29,7 +29,7 @@ It is designed for applications where social login is not enough:
 - Keycloak or enterprise OIDC;
 - native/mobile clients sending `id_token` directly;
 - Apple private relay emails;
-- secure redirect flows with state, nonce and PKCE.
+- secure redirect flows with package-managed `state`, plus OIDC `nonce` and PKCE where the adapter controls the code flow.
 
 ---
 
@@ -37,11 +37,11 @@ It is designed for applications where social login is not enough:
 
 | Provider | Flow support | Notes |
 |---|---|---|
-| Google | Redirect + token | Socialite adapter with package-managed state. |
-| Facebook | Redirect + token | Email verification trust is opt-in. |
-| Apple | Redirect + native `id_token` | Dedicated OIDC-style adapter with Apple client secret JWT. |
-| Keycloak | Redirect + token | Enterprise OIDC with roles/groups support. |
-| Generic OIDC | Redirect + token | Auth0, Azure AD, Okta or custom OIDC providers. |
+| Google | Redirect + token | Socialite adapter with package-managed one-time `state`. |
+| Facebook | Redirect + token | Socialite adapter with package-managed one-time `state`; email verification trust is opt-in. |
+| Apple | Redirect + native `id_token` | Dedicated OIDC-style adapter with Apple client secret JWT, nonce and PKCE for code flow. |
+| Keycloak | Redirect + token | Enterprise OIDC with roles/groups, nonce and PKCE for code flow. |
+| Generic OIDC | Redirect + token | Auth0, Azure AD, Okta or custom OIDC providers with nonce and PKCE for code flow. |
 
 ---
 
@@ -65,17 +65,7 @@ TokenIssuer
 AuthResult / AuthResponseFormatter
 ```
 
-The provider proves **external identity**.
-
-Your Laravel application remains responsible for:
-
-- local user ownership;
-- tenant scope;
-- allowed user types;
-- local roles and permissions;
-- account status checks;
-- local token issuing;
-- response format.
+The provider proves **external identity**. Your Laravel application owns the local user, tenant scope, roles, account status, local token and response format.
 
 ---
 
@@ -177,13 +167,13 @@ Issue local API token
 
 Provider callbacks usually return only `code` and `state`. The package restores the original application context from the consumed state before resolving or creating a provider identity link.
 
+**Important security scope:** Socialite-backed redirect providers such as Google and Facebook get package-managed one-time `state` validation. OIDC `nonce` validation and PKCE are applied by OIDC-style adapters that control the code flow, such as Apple, Keycloak and generic OIDC providers.
+
 ---
 
 ## Native / mobile token flow
 
 Mobile clients can authenticate using the provider SDK and send the provider token to Laravel.
-
-### ID token
 
 ```http
 POST /api/auth/federated/keycloak/token
@@ -196,8 +186,6 @@ Content-Type: application/json
   "channel": "mobile"
 }
 ```
-
-### Access token
 
 ```http
 POST /api/auth/federated/keycloak/token
@@ -248,16 +236,16 @@ The response is configurable through `AuthResponseFormatterInterface`, so you ca
 
 ## Security posture
 
-The package is secure-by-design for redirect and token flows:
+The package is secure-by-design for redirect and token flows, with provider-specific coverage:
 
-- one-time OAuth state;
-- replay protection through state consumption;
-- optional user-agent/IP fingerprint binding;
-- OIDC nonce;
-- PKCE for OIDC code flows;
-- redirect host validation;
-- tenant-aware callback context restoration;
-- explicit `id_token` vs `access_token` handling;
+- all package-managed redirect flows can use one-time OAuth `state`;
+- all package-managed redirect flows can reject replay through state consumption;
+- all package-managed redirect flows can use optional user-agent/IP fingerprint binding;
+- Apple, Keycloak and generic OIDC code flows can use OIDC `nonce` validation;
+- Apple, Keycloak and generic OIDC code flows can use PKCE;
+- redirect host validation protects dynamic redirect URIs;
+- tenant-aware callback context restoration prevents callback logins from losing tenant scope;
+- native/mobile OIDC token flows preserve explicit `id_token` vs `access_token` handling;
 - provider tokens are not stored by default;
 - public social providers should not auto-provision privileged users.
 
@@ -273,6 +261,8 @@ FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS=api.example.com,app.example.com
 FEDERATED_AUTH_ALLOW_HTTP_LOCALHOST_REDIRECTS=false
 ```
 
+`FEDERATED_AUTH_PKCE_ENABLED` and `FEDERATED_AUTH_OIDC_NONCE_ENABLED` affect OIDC-style adapters that control the code flow. Socialite-backed providers such as Google and Facebook still receive package-managed `state`, but package-level nonce/PKCE is not applied there unless a dedicated adapter controls that provider flow.
+
 ---
 
 ## Identity link model
@@ -281,15 +271,6 @@ The package links external identities to local users using this conceptual key:
 
 ```text
 tenant_id + provider + provider_user_id → local_user_id
-```
-
-Example:
-
-```text
-tenant_id = clinic-1
-provider = apple
-provider_user_id = apple-sub-123
-user_id = 25
 ```
 
 Do not use email as the federated identity key. Apple can return private relay emails and some providers may return missing or unverified emails.
@@ -310,17 +291,6 @@ Do not use email as the federated identity key. Apple can return private relay e
 | `AuthResponseFormatterInterface` | Format API responses. |
 | `PermissionPayloadResolverInterface` | Append optional permission payloads. |
 
-Example binding:
-
-```php
-use Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface;
-use App\Auth\JwtTokenIssuer;
-
-'bindings' => [
-    TokenIssuerInterface::class => JwtTokenIssuer::class,
-],
-```
-
 ---
 
 ## Optional `ronu/rest-generic-class` integration
@@ -336,18 +306,6 @@ FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=true
 FEDERATED_AUTH_RGC_ENABLED=true
 ```
 
-```php
-use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
-use Ronu\LaravelFederatedAuth\Contracts\PermissionPayloadResolverInterface;
-use Ronu\LaravelFederatedAuth\Integrations\RestGenericClass\RestGenericAuthResponseFormatter;
-use Ronu\LaravelFederatedAuth\Integrations\RestGenericClass\RestGenericPermissionPayloadResolver;
-
-'bindings' => [
-    PermissionPayloadResolverInterface::class => RestGenericPermissionPayloadResolver::class,
-    AuthResponseFormatterInterface::class => RestGenericAuthResponseFormatter::class,
-],
-```
-
 This enables an `ok/data/meta` response shape and optional effective permissions in login responses.
 
 ---
@@ -356,11 +314,11 @@ This enables an `ok/data/meta` response shape and optional effective permissions
 
 | Provider | Recommended use |
 |---|---|
-| Google | Client login with verified email. |
-| Facebook | Public login, but do not trust email verification unless explicitly configured. |
-| Apple | Native/mobile login; use `sub` as identity key, not email. |
-| Keycloak | Enterprise login and controlled role/group mapping. |
-| Generic OIDC | Auth0, Azure AD, Okta or custom identity servers. |
+| Google | Client login with verified email and package-managed state. |
+| Facebook | Public login with package-managed state; do not trust email verification unless explicitly configured. |
+| Apple | Native/mobile or web login; use `sub` as identity key, not email. |
+| Keycloak | Enterprise login, nonce/PKCE-capable code flow and controlled role/group mapping. |
+| Generic OIDC | Auth0, Azure AD, Okta or custom identity servers with OIDC nonce/PKCE support. |
 
 ---
 
@@ -394,8 +352,9 @@ vendor/bin/pint --test
 
 - [ ] Configure allowed redirect hosts.
 - [ ] Keep OAuth state enabled.
-- [ ] Keep OIDC nonce enabled.
-- [ ] Keep PKCE enabled for OIDC code flows.
+- [ ] Keep OIDC nonce enabled for OIDC-style providers that control the code flow.
+- [ ] Keep PKCE enabled for OIDC-style providers that control the code flow.
+- [ ] Do not assume Socialite-backed Google/Facebook redirects have package-level nonce/PKCE unless using a dedicated adapter.
 - [ ] Do not trust Facebook email verification unless intentionally configured.
 - [ ] Do not auto-provision privileged users from public social providers.
 - [ ] Confirm tenant scoping in `IdentityLinkRepository`.
