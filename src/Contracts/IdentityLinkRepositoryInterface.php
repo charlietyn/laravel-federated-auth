@@ -1,4 +1,22 @@
 <?php
+
 namespace Ronu\LaravelFederatedAuth\Contracts;
-use Ronu\LaravelFederatedAuth\DTO\AuthContext; use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity; use Ronu\LaravelFederatedAuth\DTO\LinkedIdentity;
-interface IdentityLinkRepositoryInterface { public function findByProviderIdentity(string $provider, string $providerUserId, AuthContext $context): ?LinkedIdentity; public function findByUserAndProvider(string|int $userId, string $provider, AuthContext $context): ?LinkedIdentity; public function create(string|int $userId, ExternalIdentity $identity, AuthContext $context): LinkedIdentity; public function touch(LinkedIdentity $linkedIdentity, ExternalIdentity $identity, AuthContext $context): void; public function delete(LinkedIdentity $linkedIdentity, AuthContext $context): void; public function countForUser(string|int $userId, AuthContext $context): int; }
+
+use Ronu\LaravelFederatedAuth\DTO\AuthContext;
+use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
+use Ronu\LaravelFederatedAuth\DTO\LinkedIdentity;
+
+interface IdentityLinkRepositoryInterface
+{
+    public function findByProviderIdentity(string $provider, string $providerUserId, AuthContext $context): ?LinkedIdentity;
+
+    public function findByUserAndProvider(string|int $userId, string $provider, AuthContext $context): ?LinkedIdentity;
+
+    public function create(string|int $userId, ExternalIdentity $identity, AuthContext $context): LinkedIdentity;
+
+    public function touch(LinkedIdentity $linkedIdentity, ExternalIdentity $identity, AuthContext $context): void;
+
+    public function delete(LinkedIdentity $linkedIdentity, AuthContext $context): void;
+
+    public function countForUser(string|int $userId, AuthContext $context): int;
+}
