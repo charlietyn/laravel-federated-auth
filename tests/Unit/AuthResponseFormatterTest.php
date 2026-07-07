@@ -90,7 +90,7 @@ final class FakeAuthenticatableUser implements Authenticatable
         return null;
     }
 
-    public function setRememberToken($value): void {}
+    public function setRememberToken($value) {}
 
     public function getRememberTokenName(): string
     {
