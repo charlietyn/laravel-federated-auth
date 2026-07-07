@@ -2,8 +2,8 @@
 
 namespace Ronu\LaravelFederatedAuth\Tests\Unit;
 
-use Firebase\JWT\JWT;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
+use Ronu\LaravelFederatedAuth\DTO\OAuthAuthorizationState;
 use Ronu\LaravelFederatedAuth\Providers\GenericOidcProviderAdapter;
 use Ronu\LaravelFederatedAuth\Tests\TestCase;
 
@@ -61,7 +61,16 @@ class OidcTokenTypeTest extends TestCase
 
     private function unsignedJwt(array $claims): string
     {
-        return JWT::encode($claims, '', 'none');
+        return implode('.', [
+            $this->base64UrlEncode(json_encode(['typ' => 'JWT', 'alg' => 'none'])),
+            $this->base64UrlEncode(json_encode($claims)),
+            '',
+        ]);
+    }
+
+    private function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 }
 
@@ -69,9 +78,9 @@ final class FakeOidcTokenAdapter extends GenericOidcProviderAdapter
 {
     public int $userinfoCalls = 0;
 
-    protected function decodeIdToken(string $idToken, array $config, $authorizationState = null): array
+    protected function decodeIdToken(string $idToken, array $config, ?OAuthAuthorizationState $authorizationState = null): array
     {
-        [$header, $payload] = explode('.', $idToken, 3);
+        [, $payload] = explode('.', $idToken, 3);
 
         return json_decode($this->decodeBase64Url($payload), true) ?: [];
     }
@@ -93,6 +102,16 @@ final class FakeOidcTokenAdapter extends GenericOidcProviderAdapter
 
             public function request($method, $uri = '', array $options = []): \Psr\Http\Message\ResponseInterface
             {
+                return $this->get($uri, $options);
+            }
+
+            public function requestAsync($method, $uri = '', array $options = []): \GuzzleHttp\Promise\PromiseInterface
+            {
+                throw new \BadMethodCallException('Not used.');
+            }
+
+            public function get($uri, array $options = []): \Psr\Http\Message\ResponseInterface
+            {
                 $this->adapter->userinfoCalls++;
 
                 return new \GuzzleHttp\Psr7\Response(200, [], json_encode([
@@ -100,11 +119,6 @@ final class FakeOidcTokenAdapter extends GenericOidcProviderAdapter
                     'email' => 'userinfo@example.com',
                     'email_verified' => true,
                 ]));
-            }
-
-            public function requestAsync($method, $uri = '', array $options = []): \GuzzleHttp\Promise\PromiseInterface
-            {
-                throw new \BadMethodCallException('Not used.');
             }
 
             public function getConfig($option = null): mixed
