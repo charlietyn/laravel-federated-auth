@@ -64,8 +64,8 @@ class OidcTokenTypeTest extends TestCase
     private function unsignedJwt(array $claims): string
     {
         return implode('.', [
-            $this->base64UrlEncode(json_encode(['typ' => 'JWT', 'alg' => 'none'])),
-            $this->base64UrlEncode(json_encode($claims)),
+            $this->base64UrlEncode(json_encode(['typ' => 'JWT', 'alg' => 'none'], JSON_THROW_ON_ERROR)),
+            $this->base64UrlEncode(json_encode($claims, JSON_THROW_ON_ERROR)),
             '',
         ]);
     }
@@ -109,6 +109,6 @@ final class FakeOidcTokenHttpClient extends \GuzzleHttp\Client
             'sub' => 'userinfo-user-1',
             'email' => 'userinfo@example.com',
             'email_verified' => true,
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 }
