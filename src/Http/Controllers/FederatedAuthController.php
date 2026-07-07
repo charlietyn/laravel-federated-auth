@@ -6,13 +6,18 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
+use Ronu\LaravelFederatedAuth\DTO\AuthResult;
 use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 
 class FederatedAuthController extends Controller
 {
-    public function __construct(private readonly FederatedAuthBroker $broker) {}
+    public function __construct(
+        private readonly FederatedAuthBroker $broker,
+        private readonly AuthResponseFormatterInterface $formatter,
+    ) {}
 
     public function providers(): JsonResponse
     {
@@ -36,9 +41,10 @@ class FederatedAuthController extends Controller
 
     public function callback(Request $request, string $provider): JsonResponse
     {
-        $result = $this->broker->loginFromCallback($provider, AuthContext::fromRequest($provider, $request));
+        $context = AuthContext::fromRequest($provider, $request);
+        $result = $this->broker->loginFromCallback($provider, $context);
 
-        return response()->json($result->toArray());
+        return $this->response($result, $context);
     }
 
     public function token(Request $request, string $provider): JsonResponse
@@ -51,10 +57,11 @@ class FederatedAuthController extends Controller
             'channel' => ['nullable', 'string'],
         ]);
 
+        $context = AuthContext::fromRequest($provider, $request);
         $token = $validated['id_token'] ?? $validated['access_token'];
-        $result = $this->broker->loginFromToken($provider, $token, AuthContext::fromRequest($provider, $request));
+        $result = $this->broker->loginFromToken($provider, $token, $context);
 
-        return response()->json($result->toArray());
+        return $this->response($result, $context);
     }
 
     public function linkToken(Request $request, string $provider): JsonResponse
@@ -69,7 +76,7 @@ class FederatedAuthController extends Controller
         $identity = app(IdentityProviderRegistryInterface::class)->adapterFor($provider)->userFromToken($token, $context);
         $result = $this->broker->linkIdentity($request->user(), $identity, $context);
 
-        return response()->json($result->toArray());
+        return $this->response($result, $context);
     }
 
     public function unlink(Request $request, string $provider): JsonResponse
@@ -80,5 +87,10 @@ class FederatedAuthController extends Controller
             'success' => true,
             'message' => 'External identity unlinked successfully.',
         ]);
+    }
+
+    private function response(AuthResult $result, AuthContext $context): JsonResponse
+    {
+        return response()->json($this->formatter->format($result, $context));
     }
 }
