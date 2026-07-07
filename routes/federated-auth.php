@@ -11,7 +11,7 @@ $namePrefix = config('federated-auth.routes.name_prefix', 'federated-auth.');
 Route::prefix($prefix)->middleware($middleware)->name($namePrefix)->group(function () {
     Route::get('providers', [FederatedAuthController::class, 'providers'])->name('providers');
     Route::get('{provider}/redirect', [FederatedAuthController::class, 'redirect'])->name('redirect');
-    Route::get('{provider}/callback', [FederatedAuthController::class, 'callback'])->name('callback');
+    Route::match(['GET', 'POST'], '{provider}/callback', [FederatedAuthController::class, 'callback'])->name('callback');
     Route::post('{provider}/token', [FederatedAuthController::class, 'token'])->name('token');
 });
 
