@@ -21,6 +21,7 @@ Recommended order:
 12. `12-oauth-hardening.md`
 13. `13-apple-provider.md`
 14. `14-integracion-rest-generic-class.md` - Optional integration analysis with `ronu/rest-generic-class`.
+15. `15-guia-junior-integracion-rgc.md` - Junior guide for enabling optional RGC response/permissions integration.
 
 Core idea:
 
