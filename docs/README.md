@@ -17,9 +17,17 @@ Recommended order:
 9. `09-testing.md`
 10. `10-troubleshooting.md`
 11. `11-line-by-line-request-flow.md`
+12. `12-oauth-hardening.md`
+13. `13-apple-provider.md`
 
 Core idea:
 
 ```text
 Provider -> Adapter -> ExternalIdentity -> Resolver/Provisioner -> Identity Link -> TokenIssuer
+```
+
+Security hardening idea:
+
+```text
+Redirect request -> one-time state -> optional PKCE -> optional OIDC nonce -> callback validation -> local auth
 ```
