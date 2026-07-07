@@ -63,7 +63,7 @@ Content-Type: application/json
 }
 ```
 
-The package treats this value as an Apple `id_token`, validates it and then runs the same local authentication pipeline.
+The package preserves that the submitted value came from the `id_token` field, validates it as an OIDC ID token and then runs the same local authentication pipeline. It must not be sent to a `userinfo_endpoint` as an access token.
 
 ## What gets stored
 
