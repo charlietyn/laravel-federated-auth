@@ -84,16 +84,16 @@ class GenericOidcProviderAdapter implements IdentityProviderAdapterInterface
             throw new InvalidOidcTokenException('OIDC callback did not include an authorization code.');
         }
 
-        $authorizationState = null;
+        $authorizationState = $context->authorizationState;
 
-        if ($this->oauthStateEnabled()) {
+        if ($this->oauthStateEnabled() && ! $authorizationState) {
             $incomingState = $request?->query('state') ?? $request?->input('state');
 
             if (! is_string($incomingState) || $incomingState === '') {
                 throw new InvalidOAuthStateException('OIDC callback did not include a state value.');
             }
 
-            $authorizationState = $this->stateStore()->consume($context->provider, $incomingState, $request);
+            $authorizationState = $this->stateStore()->consume($context->provider, $incomingState, $request ?: request());
         }
 
         $config = ProviderConfig::get($context->provider);
