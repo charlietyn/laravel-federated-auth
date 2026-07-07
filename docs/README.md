@@ -20,6 +20,7 @@ Recommended order:
 11. `11-line-by-line-request-flow.md`
 12. `12-oauth-hardening.md`
 13. `13-apple-provider.md`
+14. `14-integracion-rest-generic-class.md` - Optional integration analysis with `ronu/rest-generic-class`.
 
 Core idea:
 
@@ -31,4 +32,10 @@ Security hardening idea:
 
 ```text
 Redirect request -> one-time state -> optional PKCE -> optional OIDC nonce -> callback validation -> local auth
+```
+
+Optional integration idea:
+
+```text
+Federated Auth core -> optional contracts/adapters -> Rest Generic Class permissions/response/admin CRUD
 ```
