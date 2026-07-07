@@ -1,3 +1,38 @@
 <?php
+
 namespace Ronu\LaravelFederatedAuth\Support;
-final class ClaimReader { public static function get(array $claims,string $path,mixed $default=null): mixed { $current=$claims; foreach(explode('.',$path) as $segment){ if(is_array($current)&&array_key_exists($segment,$current)){ $current=$current[$segment]; continue; } return $default; } return $current; } public static function list(array $claims,string $path): array { $value=self::get($claims,$path,[]); if(is_string($value)) return [$value]; if(!is_array($value)) return []; return array_values(array_filter($value,static fn($v)=>is_string($v))); } }
+
+final class ClaimReader
+{
+    public static function get(array $claims, string $path, mixed $default = null): mixed
+    {
+        $current = $claims;
+
+        foreach (explode('.', $path) as $segment) {
+            if (is_array($current) && array_key_exists($segment, $current)) {
+                $current = $current[$segment];
+
+                continue;
+            }
+
+            return $default;
+        }
+
+        return $current;
+    }
+
+    public static function list(array $claims, string $path): array
+    {
+        $value = self::get($claims, $path, []);
+
+        if (is_string($value)) {
+            return [$value];
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter($value, static fn ($v) => is_string($v)));
+    }
+}
