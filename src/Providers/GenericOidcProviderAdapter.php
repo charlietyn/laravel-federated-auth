@@ -125,6 +125,10 @@ class GenericOidcProviderAdapter implements IdentityProviderAdapterInterface
     {
         $config = ProviderConfig::get($context->provider);
 
+        if ($this->shouldTreatSubmittedTokenAsIdToken($token, $context)) {
+            return $this->identityFromTokenPayload($context->provider, ['id_token' => $token], $config, null);
+        }
+
         if (! empty($config['userinfo_endpoint'])) {
             $response = $this->client()->get($config['userinfo_endpoint'], [
                 'headers' => ['Authorization' => 'Bearer '.$token],
@@ -251,6 +255,45 @@ class GenericOidcProviderAdapter implements IdentityProviderAdapterInterface
     protected function client(): ClientInterface
     {
         return $this->http ?: new Client(['timeout' => 10]);
+    }
+
+    private function shouldTreatSubmittedTokenAsIdToken(string $token, AuthContext $context): bool
+    {
+        if ($context->providerTokenType === 'id_token') {
+            return true;
+        }
+
+        if ($context->providerTokenType === 'access_token') {
+            return false;
+        }
+
+        return $this->looksLikeJwt($token);
+    }
+
+    private function looksLikeJwt(string $token): bool
+    {
+        $parts = explode('.', $token);
+
+        if (count($parts) !== 3) {
+            return false;
+        }
+
+        $payload = json_decode($this->base64UrlDecode($parts[1]), true);
+
+        return is_array($payload)
+            && isset($payload['sub'])
+            && (isset($payload['aud']) || isset($payload['iss']));
+    }
+
+    private function base64UrlDecode(string $value): string
+    {
+        $remainder = strlen($value) % 4;
+
+        if ($remainder) {
+            $value .= str_repeat('=', 4 - $remainder);
+        }
+
+        return base64_decode(strtr($value, '-_', '+/')) ?: '';
     }
 
     private function oauthStateEnabled(): bool
