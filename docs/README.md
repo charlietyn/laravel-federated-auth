@@ -6,6 +6,7 @@ The package is designed for senior Laravel systems where the users table, schema
 
 Recommended order:
 
+0. `00-guia-para-juniors.md` - Spanish beginner-friendly guide with examples, flows and security explanations.
 1. `01-installation.md`
 2. `02-configuration-line-by-line.md`
 3. `03-core-architecture.md`
