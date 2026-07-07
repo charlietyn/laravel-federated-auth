@@ -1,4 +1,27 @@
 <?php
+
 namespace Ronu\LaravelFederatedAuth\Services\TokenIssuers;
-use Illuminate\Contracts\Auth\Authenticatable; use Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface; use Ronu\LaravelFederatedAuth\DTO\AuthContext; use Ronu\LaravelFederatedAuth\DTO\AuthResult; use Ronu\LaravelFederatedAuth\Exceptions\TokenIssuerNotAvailableException;
-class SanctumTokenIssuer implements TokenIssuerInterface { public function issue(Authenticatable $user, AuthContext $context): AuthResult { if(!method_exists($user,'createToken')) throw new TokenIssuerNotAvailableException('The local user does not use Laravel Sanctum HasApiTokens.'); $plain=$user->createToken($context->metadata['token_name']??'federated-auth')->plainTextToken; return new AuthResult($user,['token'=>$plain,'access_token'=>$plain,'token_type'=>'bearer']); } }
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface;
+use Ronu\LaravelFederatedAuth\DTO\AuthContext;
+use Ronu\LaravelFederatedAuth\DTO\AuthResult;
+use Ronu\LaravelFederatedAuth\Exceptions\TokenIssuerNotAvailableException;
+
+class SanctumTokenIssuer implements TokenIssuerInterface
+{
+    public function issue(Authenticatable $user, AuthContext $context): AuthResult
+    {
+        if (! method_exists($user, 'createToken')) {
+            throw new TokenIssuerNotAvailableException('The local user does not use Laravel Sanctum HasApiTokens.');
+        }
+
+        $plain = $user->createToken($context->metadata['token_name'] ?? 'federated-auth')->plainTextToken;
+
+        return new AuthResult($user, [
+            'token' => $plain,
+            'access_token' => $plain,
+            'token_type' => 'bearer',
+        ]);
+    }
+}
