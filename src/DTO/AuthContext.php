@@ -17,6 +17,7 @@ final class AuthContext
         public readonly ?string $state = null,
         public readonly array $metadata = [],
         public readonly ?OAuthAuthorizationState $authorizationState = null,
+        public readonly ?string $providerTokenType = null,
     ) {}
 
     public static function fromRequest(string $provider, Request $request): self
@@ -34,6 +35,7 @@ final class AuthContext
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ],
+            providerTokenType: self::providerTokenTypeFromRequest($request),
         );
     }
 
@@ -58,6 +60,37 @@ final class AuthContext
                 'oauth_state_restored' => true,
             ]),
             authorizationState: $state,
+            providerTokenType: $this->providerTokenType,
         );
+    }
+
+    public function withProviderTokenType(?string $providerTokenType): self
+    {
+        return new self(
+            provider: $this->provider,
+            request: $this->request,
+            guard: $this->guard,
+            tenantId: $this->tenantId,
+            userType: $this->userType,
+            channel: $this->channel,
+            redirectUri: $this->redirectUri,
+            state: $this->state,
+            metadata: $this->metadata,
+            authorizationState: $this->authorizationState,
+            providerTokenType: $providerTokenType,
+        );
+    }
+
+    private static function providerTokenTypeFromRequest(Request $request): ?string
+    {
+        if ($request->filled('id_token')) {
+            return 'id_token';
+        }
+
+        if ($request->filled('access_token')) {
+            return 'access_token';
+        }
+
+        return null;
     }
 }
