@@ -20,7 +20,8 @@ class OidcTokenTypeTest extends TestCase
             'jwks_uri' => 'https://sso.example.com/realms/demo/protocol/openid-connect/certs',
         ]);
 
-        $adapter = new FakeOidcTokenAdapter();
+        $client = new FakeOidcTokenHttpClient();
+        $adapter = new FakeOidcTokenAdapter($client);
         $identity = $adapter->userFromToken(
             $this->unsignedJwt([
                 'iss' => 'https://sso.example.com/realms/demo',
@@ -35,7 +36,7 @@ class OidcTokenTypeTest extends TestCase
 
         $this->assertSame('user-123', $identity->providerUserId);
         $this->assertSame('client@example.com', $identity->email);
-        $this->assertSame(0, $adapter->userinfoCalls);
+        $this->assertSame(0, $client->userinfoCalls);
     }
 
     public function test_oidc_user_from_token_uses_userinfo_for_submitted_access_token(): void
@@ -49,14 +50,15 @@ class OidcTokenTypeTest extends TestCase
             'jwks_uri' => 'https://sso.example.com/realms/demo/protocol/openid-connect/certs',
         ]);
 
-        $adapter = new FakeOidcTokenAdapter();
+        $client = new FakeOidcTokenHttpClient();
+        $adapter = new FakeOidcTokenAdapter($client);
         $identity = $adapter->userFromToken(
             'opaque-access-token',
             new AuthContext(provider: 'keycloak', providerTokenType: 'access_token'),
         );
 
         $this->assertSame('userinfo-user-1', $identity->providerUserId);
-        $this->assertSame(1, $adapter->userinfoCalls);
+        $this->assertSame(1, $client->userinfoCalls);
     }
 
     private function unsignedJwt(array $claims): string
@@ -76,56 +78,11 @@ class OidcTokenTypeTest extends TestCase
 
 final class FakeOidcTokenAdapter extends GenericOidcProviderAdapter
 {
-    public int $userinfoCalls = 0;
-
     protected function decodeIdToken(string $idToken, array $config, ?OAuthAuthorizationState $authorizationState = null): array
     {
         [, $payload] = explode('.', $idToken, 3);
 
         return json_decode($this->decodeBase64Url($payload), true) ?: [];
-    }
-
-    protected function client(): \GuzzleHttp\ClientInterface
-    {
-        return new class($this) implements \GuzzleHttp\ClientInterface {
-            public function __construct(private readonly FakeOidcTokenAdapter $adapter) {}
-
-            public function send(\Psr\Http\Message\RequestInterface $request, array $options = []): \Psr\Http\Message\ResponseInterface
-            {
-                throw new \BadMethodCallException('Not used.');
-            }
-
-            public function sendAsync(\Psr\Http\Message\RequestInterface $request, array $options = []): \GuzzleHttp\Promise\PromiseInterface
-            {
-                throw new \BadMethodCallException('Not used.');
-            }
-
-            public function request($method, $uri = '', array $options = []): \Psr\Http\Message\ResponseInterface
-            {
-                return $this->get($uri, $options);
-            }
-
-            public function requestAsync($method, $uri = '', array $options = []): \GuzzleHttp\Promise\PromiseInterface
-            {
-                throw new \BadMethodCallException('Not used.');
-            }
-
-            public function get($uri, array $options = []): \Psr\Http\Message\ResponseInterface
-            {
-                $this->adapter->userinfoCalls++;
-
-                return new \GuzzleHttp\Psr7\Response(200, [], json_encode([
-                    'sub' => 'userinfo-user-1',
-                    'email' => 'userinfo@example.com',
-                    'email_verified' => true,
-                ]));
-            }
-
-            public function getConfig($option = null): mixed
-            {
-                return null;
-            }
-        };
     }
 
     private function decodeBase64Url(string $value): string
@@ -137,5 +94,21 @@ final class FakeOidcTokenAdapter extends GenericOidcProviderAdapter
         }
 
         return base64_decode(strtr($value, '-_', '+/')) ?: '';
+    }
+}
+
+final class FakeOidcTokenHttpClient extends \GuzzleHttp\Client
+{
+    public int $userinfoCalls = 0;
+
+    public function get($uri, array $options = []): \Psr\Http\Message\ResponseInterface
+    {
+        $this->userinfoCalls++;
+
+        return new \GuzzleHttp\Psr7\Response(200, [], json_encode([
+            'sub' => 'userinfo-user-1',
+            'email' => 'userinfo@example.com',
+            'email_verified' => true,
+        ]));
     }
 }
