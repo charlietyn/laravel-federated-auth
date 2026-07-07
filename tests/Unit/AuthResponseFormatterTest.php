@@ -12,9 +12,9 @@ use Ronu\LaravelFederatedAuth\Tests\TestCase;
 
 class AuthResponseFormatterTest extends TestCase
 {
-    public function test_default_formatter_returns_safe_user_payload(): void
+    public function test_default_formatter_returns_configured_user_payload_only(): void
     {
-        config()->set('federated-auth.response.user_fields', ['id', 'email', 'password']);
+        config()->set('federated-auth.response.user_fields', ['id', 'email']);
         config()->set('federated-auth.response.include_permissions', false);
 
         $formatter = new DefaultAuthResponseFormatter(new NullPermissionPayloadResolver());
@@ -28,7 +28,7 @@ class AuthResponseFormatterTest extends TestCase
         $this->assertTrue($payload['success']);
         $this->assertSame(10, $payload['user']['id']);
         $this->assertSame('client@example.com', $payload['user']['email']);
-        $this->assertSame('secret', $payload['user']['password']);
+        $this->assertArrayNotHasKey('password', $payload['user']);
         $this->assertSame('token', $payload['access_token']);
     }
 
