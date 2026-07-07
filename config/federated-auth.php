@@ -1,7 +1,9 @@
 <?php
 
+use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
+use Ronu\LaravelFederatedAuth\Contracts\PermissionPayloadResolverInterface;
 use Ronu\LaravelFederatedAuth\Contracts\RoleMapperInterface;
 use Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface;
 use Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface;
@@ -13,6 +15,8 @@ use Ronu\LaravelFederatedAuth\Services\ConfigurableUserResolver;
 use Ronu\LaravelFederatedAuth\Services\DefaultUserStatusChecker;
 use Ronu\LaravelFederatedAuth\Services\NoopRoleMapper;
 use Ronu\LaravelFederatedAuth\Services\NullUserProvisioner;
+use Ronu\LaravelFederatedAuth\Services\Permissions\NullPermissionPayloadResolver;
+use Ronu\LaravelFederatedAuth\Services\Responses\DefaultAuthResponseFormatter;
 use Ronu\LaravelFederatedAuth\Services\TokenIssuers\JwtAuthTokenIssuer;
 
 return [
@@ -175,6 +179,14 @@ return [
         'include_user' => true,
         'user_fields' => ['id', 'uuid', 'name', 'email', 'username', 'user_type', 'status_id', 'avatar'],
         'include_external_identity' => false,
+        'include_permissions' => env('FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS', false),
+    ],
+
+    'integrations' => [
+        'rest_generic_class' => [
+            'enabled' => env('FEDERATED_AUTH_RGC_ENABLED', false),
+            'log_permission_errors' => env('FEDERATED_AUTH_RGC_LOG_PERMISSION_ERRORS', false),
+        ],
     ],
 
     'bindings' => [
@@ -185,5 +197,7 @@ return [
         TokenIssuerInterface::class => JwtAuthTokenIssuer::class,
         UserStatusCheckerInterface::class => DefaultUserStatusChecker::class,
         RoleMapperInterface::class => NoopRoleMapper::class,
+        PermissionPayloadResolverInterface::class => NullPermissionPayloadResolver::class,
+        AuthResponseFormatterInterface::class => DefaultAuthResponseFormatter::class,
     ],
 ];
