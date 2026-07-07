@@ -63,13 +63,16 @@ abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterf
         $driver = $this->driver($context->provider);
 
         if ($this->oauthStateEnabled()) {
-            $incomingState = $context->request?->query('state') ?? $context->request?->input('state');
+            if (! $context->authorizationState) {
+                $incomingState = $context->request?->query('state') ?? $context->request?->input('state');
 
-            if (! is_string($incomingState) || $incomingState === '') {
-                throw new InvalidOAuthStateException('OAuth callback did not include a state value.');
+                if (! is_string($incomingState) || $incomingState === '') {
+                    throw new InvalidOAuthStateException('OAuth callback did not include a state value.');
+                }
+
+                $this->stateStore()->consume($context->provider, $incomingState, $context->request ?: request());
             }
 
-            $this->stateStore()->consume($context->provider, $incomingState, $context->request);
             $driver->stateless();
         } elseif (($config['stateless'] ?? true) === true) {
             $driver->stateless();
