@@ -15,6 +15,9 @@
     "guzzlehttp/guzzle": "^7.8",
     "firebase/php-jwt": "^6.10"
   },
+  "suggest": {
+    "ronu/rest-generic-class": "Optional integration for REST-style response formatting and effective permission payloads."
+  },
   "require-dev": {
     "orchestra/testbench": "^9.0|^10.0",
     "phpunit/phpunit": "^11.0",
