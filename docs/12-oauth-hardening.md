@@ -52,6 +52,30 @@ Create ExternalIdentity
 Local user resolution / provisioning / role mapping / token issuing
 ```
 
+## Native token flow
+
+For `POST /api/auth/federated/{provider}/token`, the package preserves which provider token field the client submitted:
+
+```json
+{ "id_token": "..." }
+```
+
+or:
+
+```json
+{ "access_token": "..." }
+```
+
+This matters for OIDC providers such as Keycloak, Auth0, Okta or Azure AD:
+
+| Submitted field | Behavior |
+|---|---|
+| `id_token` | Validate and decode as an OIDC ID token through JWKS. |
+| `access_token` | Use `userinfo_endpoint` as a bearer access token when configured. |
+| raw/unknown token type | JWT-looking tokens fall back to ID-token handling; otherwise userinfo is used when available. |
+
+This prevents a native app's `id_token` from being sent to the `userinfo_endpoint` as if it were an access token.
+
 ## Configuration
 
 ```php
