@@ -13,6 +13,10 @@ class RestGenericPermissionPayloadResolver implements PermissionPayloadResolverI
 
     public function resolve(Authenticatable $user, AuthContext $context): array
     {
+        if (! (bool) config('federated-auth.integrations.rest_generic_class.enabled', false)) {
+            return [];
+        }
+
         if (! $this->detector->available()) {
             return [];
         }
