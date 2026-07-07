@@ -3,9 +3,11 @@
 namespace Ronu\LaravelFederatedAuth;
 
 use Illuminate\Support\ServiceProvider;
+use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
+use Ronu\LaravelFederatedAuth\Contracts\PermissionPayloadResolverInterface;
 use Ronu\LaravelFederatedAuth\Contracts\RoleMapperInterface;
 use Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface;
 use Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface;
@@ -24,6 +26,8 @@ use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 use Ronu\LaravelFederatedAuth\Services\IdentityProviderRegistry;
 use Ronu\LaravelFederatedAuth\Services\NoopRoleMapper;
 use Ronu\LaravelFederatedAuth\Services\NullUserProvisioner;
+use Ronu\LaravelFederatedAuth\Services\Permissions\NullPermissionPayloadResolver;
+use Ronu\LaravelFederatedAuth\Services\Responses\DefaultAuthResponseFormatter;
 use Ronu\LaravelFederatedAuth\Services\TokenIssuers\JwtAuthTokenIssuer;
 
 class FederatedAuthServiceProvider extends ServiceProvider
@@ -81,6 +85,8 @@ class FederatedAuthServiceProvider extends ServiceProvider
             TokenIssuerInterface::class => JwtAuthTokenIssuer::class,
             UserStatusCheckerInterface::class => DefaultUserStatusChecker::class,
             RoleMapperInterface::class => NoopRoleMapper::class,
+            PermissionPayloadResolverInterface::class => NullPermissionPayloadResolver::class,
+            AuthResponseFormatterInterface::class => DefaultAuthResponseFormatter::class,
         ];
     }
 }
