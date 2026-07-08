@@ -1,3 +1,16 @@
 <?php
+
 namespace Ronu\LaravelFederatedAuth\Events;
-class ExternalAccountLinked { public function __construct(public readonly \Illuminate\Contracts\Auth\Authenticatable $user, public readonly \Ronu\LaravelFederatedAuth\DTO\ExternalIdentity $identity, public readonly \Ronu\LaravelFederatedAuth\DTO\AuthContext $context) {} }
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Ronu\LaravelFederatedAuth\DTO\AuthContext;
+use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
+
+class ExternalAccountLinked
+{
+    public function __construct(
+        public readonly Authenticatable $user,
+        public readonly ExternalIdentity $identity,
+        public readonly AuthContext $context,
+    ) {}
+}
