@@ -350,13 +350,13 @@ Full documentation lives in [`docs`](docs).
 
 Recommended starting points:
 
-- [`docs/00-guia-para-juniors.md`](docs/00-guia-para-juniors.md)
+- [`docs/00-simple-guide.md`](docs/00-simple-guide.md)
 - [`docs/03-core-architecture.md`](docs/03-core-architecture.md)
 - [`docs/08-security-and-edge-cases.md`](docs/08-security-and-edge-cases.md)
 - [`docs/12-oauth-hardening.md`](docs/12-oauth-hardening.md)
 - [`docs/13-apple-provider.md`](docs/13-apple-provider.md)
 - [`docs/14-integracion-rest-generic-class.md`](docs/14-integracion-rest-generic-class.md)
-- [`docs/15-guia-junior-integracion-rgc.md`](docs/15-guia-junior-integracion-rgc.md)
+- [`docs/15-guide-integration.md`](docs/15-guide-integration.md)
 
 ---
 
