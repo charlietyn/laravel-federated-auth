@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Auth;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Modules\clients\Models\Client;
+use Modules\security\Models\Users;
+use Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface;
+use Ronu\LaravelFederatedAuth\DTO\AuthContext;
+use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
+
+class RonuUserProvisioner implements UserProvisionerInterface
+{
+    public function provision(ExternalIdentity $identity, AuthContext $context): Authenticatable
+    {
+        return DB::connection('db')->transaction(function () use ($identity, $context) {
+            $userType = $context->userType ?: 'Client';
+            if ($userType !== 'Client') {
+                abort(422, 'Only Client users can be auto-provisioned through federated auth.');
+            } $user = Users::create(['username' => $this->makeUniqueUsername($identity), 'password' => Str::random(64), 'name' => $identity->name ?: ($identity->email ?: 'Ronu User'), 'last_name' => $identity->lastName, 'email' => $identity->email, 'phone' => null, 'user_type' => 'Client', 'status_id' => 1, 'avatar' => $identity->avatarUrl ?: 'images/users/user.png']);
+            Client::create(['uuid' => (string) Str::uuid(), 'address' => 'Pending address', 'user_id' => $user->id, 'status_id' => 1]);
+            $user->array_role()->sync([4 => ['enabled' => true, 'user_id' => $user->id]]);
+
+            return $user;
+        });
+    }
+
+    private function makeUniqueUsername(ExternalIdentity $identity): string
+    {
+        $base = Str::slug(Str::before($identity->email ?: $identity->providerUserId, '@'), '_') ?: 'user';
+        if (! Users::query()->where('username', $base)->exists()) {
+            return $base;
+        }
+
+return $base.'_'.$identity->provider.'_'.substr(md5($identity->providerUserId), 0, 8);
+    }
+}

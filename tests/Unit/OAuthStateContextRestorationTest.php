@@ -53,17 +53,17 @@ class OAuthStateContextRestorationTest extends TestCase
         );
 
         $stateStore = new RecordingStateStore($state);
-        $adapter = new RecordingCallbackAdapter();
-        $links = new RecordingLinkRepository();
+        $adapter = new RecordingCallbackAdapter;
+        $links = new RecordingLinkRepository;
 
         $broker = new FederatedAuthBroker(
             providers: new SingleAdapterRegistry($adapter),
             links: $links,
-            users: new NullUserResolver(),
+            users: new NullUserResolver,
             provisioner: new FixedUserProvisioner(new ContextRestorationUser(99)),
-            tokens: new ContextAwareTokenIssuer(),
-            statusChecker: new AllowAllStatusChecker(),
-            roleMapper: new NoopTestRoleMapper(),
+            tokens: new ContextAwareTokenIssuer,
+            statusChecker: new AllowAllStatusChecker,
+            roleMapper: new NoopTestRoleMapper,
             states: $stateStore,
         );
 

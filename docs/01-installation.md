@@ -31,7 +31,7 @@ Line by line:
 php artisan vendor:publish --tag=federated-auth-migrations
 ```
 
-This publishes the identity-link table migration. You can use it directly, or create a custom migration if your application uses schemas such as `mod_security.social_accounts`.
+This publishes the identity-link table migration. You can use it directly, or create a custom migration if your application uses schemas such as `security.social_accounts`.
 
 ## Step 4 - Run migration
 

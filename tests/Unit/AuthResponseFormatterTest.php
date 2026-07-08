@@ -17,7 +17,7 @@ class AuthResponseFormatterTest extends TestCase
         config()->set('federated-auth.response.user_fields', ['id', 'email']);
         config()->set('federated-auth.response.include_permissions', false);
 
-        $formatter = new DefaultAuthResponseFormatter(new NullPermissionPayloadResolver());
+        $formatter = new DefaultAuthResponseFormatter(new NullPermissionPayloadResolver);
         $result = new AuthResult(
             user: new FakeAuthenticatableUser(['id' => 10, 'email' => 'client@example.com', 'password' => 'secret']),
             tokens: ['access_token' => 'token', 'token_type' => 'bearer'],
@@ -37,7 +37,7 @@ class AuthResponseFormatterTest extends TestCase
         config()->set('federated-auth.response.user_fields', ['id', 'email']);
         config()->set('federated-auth.response.include_permissions', false);
 
-        $formatter = new RestGenericAuthResponseFormatter(new NullPermissionPayloadResolver());
+        $formatter = new RestGenericAuthResponseFormatter(new NullPermissionPayloadResolver);
         $result = new AuthResult(
             user: new FakeAuthenticatableUser(['id' => 25, 'email' => 'client@example.com']),
             tokens: ['access_token' => 'token', 'token_type' => 'bearer', 'expires_in' => 60],

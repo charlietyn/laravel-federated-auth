@@ -383,9 +383,9 @@ Ejemplo de allowlist:
 ```php
 'role_mapping' => [
     'keycloak' => [
-        'app-project-admin' => 'Admin',
-        'app-project-vet' => 'Veterinarian',
-        'app-project-client' => 'Client',
+        'ronu-admin' => 'Admin',
+        'ronu-vet' => 'Veterinarian',
+        'ronu-client' => 'Client',
     ],
 ]
 ```
