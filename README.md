@@ -355,7 +355,7 @@ Recommended starting points:
 - [`docs/08-security-and-edge-cases.md`](docs/08-security-and-edge-cases.md)
 - [`docs/12-oauth-hardening.md`](docs/12-oauth-hardening.md)
 - [`docs/13-apple-provider.md`](docs/13-apple-provider.md)
-- [`docs/14-integracion-rest-generic-class.md`](docs/14-integracion-rest-generic-class.md)
+- [`docs/14-rest-generic-class-integration.md`](docs/14-rest-generic-class-integration.md)
 - [`docs/15-guide-integration.md`](docs/15-guide-integration.md)
 
 ---
