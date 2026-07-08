@@ -69,6 +69,28 @@ The provider proves **external identity**. Your Laravel application owns the loc
 
 ---
 
+## Sequence diagrams
+
+The following diagrams trace the full request pipeline end to end, from the HTTP entry point through `FederatedAuthBroker` and the extension contracts down to the JSON response.
+
+Both use the **browser redirect flow**. The **native / mobile token flow** (`POST /{provider}/token` → `loginFromToken()`) skips the redirect and state-consumption phases (steps 1–2) and enters the broker at `authenticateIdentity()` — every step from `validateIdentity()` onwards is identical.
+
+### Login — returning user (existing identity)
+
+An external identity that is already linked to a local user. The broker resolves the user, enforces account status, touches the link and issues a local token. No user is created (`was_provisioned=false`, `was_linked=false`).
+
+![Federated login sequence diagram: browser redirect, one-time state consumption, identity resolution and local token issuance](docs/diagrams/federated-login-sequence.svg)
+
+### Registration — first-time user (auto-provision)
+
+No linked identity exists. After the security validations, the broker optionally matches by verified email, then provisions a new local user (only when `auto_provision` is enabled), creates the identity link and issues a token (`was_provisioned=true`, `was_linked=true`).
+
+![Federated registration sequence diagram: callback, optional verified-email match, user provisioning, identity linking and token issuance](docs/diagrams/federated-register-sequence.svg)
+
+> Diagrams are generated as standalone SVGs under [`docs/diagrams`](docs/diagrams).
+
+---
+
 ## Installation
 
 ```bash
