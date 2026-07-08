@@ -3,7 +3,16 @@
   "description": "Configurable Laravel federated authentication bridge for social providers, OAuth2/OIDC providers and enterprise identity systems such as Keycloak.",
   "type": "library",
   "license": "MIT",
-  "keywords": ["laravel", "oauth2", "openid-connect", "oidc", "keycloak", "socialite", "federated-auth", "identity-broker"],
+  "keywords": [
+    "laravel",
+    "oauth2",
+    "openid-connect",
+    "oidc",
+    "keycloak",
+    "socialite",
+    "federated-auth",
+    "identity-broker"
+  ],
   "require": {
     "php": "^8.2",
     "illuminate/support": "^11.0|^12.0",
@@ -23,10 +32,44 @@
     "phpunit/phpunit": "^11.0",
     "laravel/pint": "^1.18"
   },
-  "autoload": {"psr-4": {"Ronu\\LaravelFederatedAuth\\": "src/"}},
-  "autoload-dev": {"psr-4": {"Ronu\\LaravelFederatedAuth\\Tests\\": "tests/"}},
-  "extra": {"laravel": {"providers": ["Ronu\\LaravelFederatedAuth\\FederatedAuthServiceProvider"], "aliases": {"FederatedAuth": "Ronu\\LaravelFederatedAuth\\Facades\\FederatedAuth"}}},
-  "config": {"sort-packages": true, "allow-plugins": {"pestphp/pest-plugin": true, "php-http/discovery": true}},
+  "autoload": {
+    "psr-4": {
+      "Ronu\\LaravelFederatedAuth\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Ronu\\LaravelFederatedAuth\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "@php vendor/bin/phpunit",
+    "test:unit": "@php vendor/bin/phpunit --testsuite Unit",
+    "pint": "@php vendor/bin/pint",
+    "pint:test": "@php vendor/bin/pint --test",
+    "format": "@pint",
+    "qa": [
+      "@pint:test",
+      "@test"
+    ]
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Ronu\\LaravelFederatedAuth\\FederatedAuthServiceProvider"
+      ],
+      "aliases": {
+        "FederatedAuth": "Ronu\\LaravelFederatedAuth\\Facades\\FederatedAuth"
+      }
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true,
+      "php-http/discovery": true
+    }
+  },
   "minimum-stability": "stable",
   "prefer-stable": true
 }
