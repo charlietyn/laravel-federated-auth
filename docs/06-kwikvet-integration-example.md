@@ -1,9 +1,9 @@
-# 06 - Kwikvet integration example
+# 06 - Ronu integration example
 
-Kwikvet is a complex Laravel project:
+Ronu is a complex Laravel project:
 
-- user model: `Modules\mod_security\Models\Users`;
-- table: `mod_security.users`;
+- user model: `Modules\security\Models\Users`;
+- table: `security.users`;
 - JWT guard: `auth:api`;
 - related profile tables: `Client`, `Veterinarian`, `Technician`;
 - roles are assigned through `role_users`;
@@ -13,9 +13,9 @@ Kwikvet is a complex Laravel project:
 
 ```php
 'user' => [
-    'model' => \Modules\mod_security\Models\Users::class,
+    'model' => \Modules\security\Models\Users::class,
     'connection' => 'db',
-    'table' => 'mod_security.users',
+    'table' => 'security.users',
     'primary_key' => 'id',
     'columns' => [
         'email' => 'email',
@@ -30,7 +30,7 @@ Kwikvet is a complex Laravel project:
 ```php
 'identity_store' => [
     'connection' => 'db',
-    'table' => 'mod_security.social_accounts',
+    'table' => 'security.social_accounts',
 ],
 ```
 
@@ -38,17 +38,17 @@ Kwikvet is a complex Laravel project:
 
 ```php
 'bindings' => [
-    \Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface::class => \App\Auth\KwikvetUserProvisioner::class,
-    \Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface::class => \App\Auth\KwikvetJwtTokenIssuer::class,
+    \Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface::class => \App\Auth\RonuUserProvisioner::class,
+    \Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface::class => \App\Auth\RonuJwtTokenIssuer::class,
 ],
 ```
 
 ## Why custom provisioning is required
 
-A Kwikvet user is not only a row in `users`. For a Client login, provisioning must:
+A Ronu user is not only a row in `users`. For a Client login, provisioning must:
 
-1. create `mod_security.users`;
-2. create `mod_clients.client`;
+1. create `security.users`;
+2. create `clients.client`;
 3. assign role ID `4`;
 4. set `status_id=1`;
 5. generate a random internal password;

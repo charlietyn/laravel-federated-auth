@@ -13,7 +13,7 @@ class ProviderRegistryTest extends TestCase
 {
     public function test_it_resolves_registered_adapter(): void
     {
-        $registry = new IdentityProviderRegistry();
+        $registry = new IdentityProviderRegistry;
         $adapter = new class implements IdentityProviderAdapterInterface
         {
             public function name(): string
@@ -51,6 +51,6 @@ class ProviderRegistryTest extends TestCase
     {
         $this->expectException(ProviderNotSupportedException::class);
 
-        (new IdentityProviderRegistry())->adapterFor('unknown');
+        (new IdentityProviderRegistry)->adapterFor('unknown');
     }
 }

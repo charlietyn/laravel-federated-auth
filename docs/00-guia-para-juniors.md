@@ -151,7 +151,7 @@ users
 O en un sistema modular:
 
 ```text
-mod_security.users
+security.users
 ```
 
 La biblioteca crea o usa una tabla de vinculos externos:
@@ -244,8 +244,8 @@ Si tu aplicacion no diferencia tipos de usuario, puedes dejar `type` como `null`
 Supongamos:
 
 ```text
-Modules\mod_security\Models\Users
-mod_security.users
+Modules\security\Models\Users
+security.users
 status_id
 user_type
 ```
@@ -254,9 +254,9 @@ Configura:
 
 ```php
 'user' => [
-    'model' => Modules\mod_security\Models\Users::class,
+    'model' => Modules\security\Models\Users::class,
     'connection' => 'pgsql',
-    'table' => 'mod_security.users',
+    'table' => 'security.users',
     'primary_key' => 'id',
     'columns' => [
         'id' => 'id',
@@ -277,7 +277,7 @@ Y la tabla de vinculos externos puede vivir en tu schema de seguridad:
 ```php
 'identity_store' => [
     'connection' => 'pgsql',
-    'table' => 'mod_security.social_accounts',
+    'table' => 'security.social_accounts',
     'tenant_column' => 'tenant_id',
     'user_id_column' => 'user_id',
     'store_provider_tokens' => false,
@@ -848,8 +848,8 @@ Ejemplo config:
 ```env
 FEDERATED_AUTH_KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=https://auth.example.com
-KEYCLOAK_REALM=kwikvet
-KEYCLOAK_CLIENT_ID=kwikvet-api
+KEYCLOAK_REALM=ronu
+KEYCLOAK_CLIENT_ID=ronu-api
 KEYCLOAK_CLIENT_SECRET=secret
 KEYCLOAK_REDIRECT_URI=https://api.example.com/api/auth/federated/keycloak/callback
 ```

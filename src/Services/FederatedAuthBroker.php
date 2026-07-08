@@ -22,6 +22,7 @@ use Ronu\LaravelFederatedAuth\Exceptions\EmailNotVerifiedException;
 use Ronu\LaravelFederatedAuth\Exceptions\EmailRequiredException;
 use Ronu\LaravelFederatedAuth\Exceptions\IdentityAlreadyLinkedException;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidOAuthStateException;
+use Ronu\LaravelFederatedAuth\Exceptions\LastIdentityUnlinkDeniedException;
 use Ronu\LaravelFederatedAuth\Exceptions\PackageDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\ProviderDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\UserProvisioningNotConfiguredException;
@@ -110,7 +111,7 @@ class FederatedAuthBroker
             $hasPassword = filled(data_get($user, $passwordColumn));
 
             if ($count <= 1 && ! $hasPassword) {
-                throw new \Ronu\LaravelFederatedAuth\Exceptions\LastIdentityUnlinkDeniedException('Cannot unlink the last external identity from a user without a local password.');
+                throw new LastIdentityUnlinkDeniedException('Cannot unlink the last external identity from a user without a local password.');
             }
         }
 

@@ -131,7 +131,7 @@ Set your real user model:
 
 ```php
 App\\Models\\User::class
-Modules\\mod_security\\Models\\Users::class
+Modules\\security\\Models\\Users::class
 ```
 
 ## Local user columns
@@ -161,10 +161,10 @@ This table links local users to external identities using:
 tenant_id + provider + provider_user_id
 ```
 
-For Kwikvet this can be changed to:
+For Ronu this can be changed to:
 
 ```php
-'table' => 'mod_security.social_accounts'
+'table' => 'security.social_accounts'
 ```
 
 ## Bindings

@@ -5,8 +5,8 @@
 ```env
 FEDERATED_AUTH_KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=https://auth.example.com
-KEYCLOAK_REALM=kwikvet
-KEYCLOAK_CLIENT_ID=kwikvet-api
+KEYCLOAK_REALM=ronu
+KEYCLOAK_CLIENT_ID=ronu-api
 KEYCLOAK_CLIENT_SECRET=secret
 KEYCLOAK_REDIRECT_URI=https://api.example.com/api/auth/federated/keycloak/callback
 ```
@@ -80,7 +80,7 @@ class KeycloakRoleMapper implements RoleMapperInterface
 {
     public function sync(Authenticatable $user, ExternalIdentity $identity, AuthContext $context): void
     {
-        if (in_array('kwikvet-admin', $identity->roles, true)) {
+        if (in_array('ronu-admin', $identity->roles, true)) {
             $user->assignRole('Admin');
         }
     }

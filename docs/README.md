@@ -12,7 +12,7 @@ Recommended order:
 3. `03-core-architecture.md`
 4. `04-google-facebook.md`
 5. `05-keycloak-oidc.md`
-6. `06-kwikvet-integration-example.md`
+6. `06-ronu-integration-example.md`
 7. `07-extending-contracts.md`
 8. `08-security-and-edge-cases.md`
 9. `09-testing.md`

@@ -37,7 +37,7 @@ class FederatedAuthServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/federated-auth.php', 'federated-auth');
 
         $this->app->singleton(IdentityProviderRegistryInterface::class, function ($app) {
-            $registry = new IdentityProviderRegistry();
+            $registry = new IdentityProviderRegistry;
             $registry->register($app->make(GoogleProviderAdapter::class));
             $registry->register($app->make(FacebookProviderAdapter::class));
             $registry->register($app->make(AppleProviderAdapter::class));

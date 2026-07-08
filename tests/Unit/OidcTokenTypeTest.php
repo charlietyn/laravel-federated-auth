@@ -2,6 +2,9 @@
 
 namespace Ronu\LaravelFederatedAuth\Tests\Unit;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Response;
+use Psr\Http\Message\ResponseInterface;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\OAuthAuthorizationState;
 use Ronu\LaravelFederatedAuth\Providers\GenericOidcProviderAdapter;
@@ -20,7 +23,7 @@ class OidcTokenTypeTest extends TestCase
             'jwks_uri' => 'https://sso.example.com/realms/demo/protocol/openid-connect/certs',
         ]);
 
-        $client = new FakeOidcTokenHttpClient();
+        $client = new FakeOidcTokenHttpClient;
         $adapter = new FakeOidcTokenAdapter($client);
         $identity = $adapter->userFromToken(
             $this->unsignedJwt([
@@ -50,7 +53,7 @@ class OidcTokenTypeTest extends TestCase
             'jwks_uri' => 'https://sso.example.com/realms/demo/protocol/openid-connect/certs',
         ]);
 
-        $client = new FakeOidcTokenHttpClient();
+        $client = new FakeOidcTokenHttpClient;
         $adapter = new FakeOidcTokenAdapter($client);
         $identity = $adapter->userFromToken(
             'opaque-access-token',
@@ -97,15 +100,15 @@ final class FakeOidcTokenAdapter extends GenericOidcProviderAdapter
     }
 }
 
-final class FakeOidcTokenHttpClient extends \GuzzleHttp\Client
+final class FakeOidcTokenHttpClient extends Client
 {
     public int $userinfoCalls = 0;
 
-    public function get($uri, array $options = []): \Psr\Http\Message\ResponseInterface
+    public function get($uri, array $options = []): ResponseInterface
     {
         $this->userinfoCalls++;
 
-        return new \GuzzleHttp\Psr7\Response(200, [], json_encode([
+        return new Response(200, [], json_encode([
             'sub' => 'userinfo-user-1',
             'email' => 'userinfo@example.com',
             'email_verified' => true,
