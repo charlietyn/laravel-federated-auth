@@ -11,16 +11,15 @@
  *
  *     php docs/diagrams/generate.php docs/diagrams
  */
-
 const COL_STEP = 176;
 const LEFT_PAD = 92;
-const BOX_W    = 150;
-const BOX_H    = 48;
-const TITLE_H  = 58;
+const BOX_W = 150;
+const BOX_H = 48;
+const TITLE_H = 58;
 const HEAD_TOP = TITLE_H + 8;
 const LIFE_TOP = HEAD_TOP + BOX_H;
-const CONTENT  = LIFE_TOP + 34;
-const ROW_MSG  = 36;
+const CONTENT = LIFE_TOP + 34;
+const ROW_MSG = 36;
 
 function e(string $s): string
 {
@@ -33,13 +32,13 @@ function centerX(int $i): int
 }
 
 /**
- * @param array<string,array{name:string,role:string,color:string}> $participants
- * @param list<array<string,mixed>> $steps
+ * @param  array<string,array{name:string,role:string,color:string}>  $participants
+ * @param  list<array<string,mixed>>  $steps
  */
 function render(string $title, array $participants, array $steps): string
 {
-    $ids  = array_keys($participants);
-    $idx  = array_flip($ids);
+    $ids = array_keys($participants);
+    $idx = array_flip($ids);
     $last = count($ids) - 1;
     $width = centerX($last) + BOX_W / 2 + 40;
 
@@ -148,10 +147,10 @@ function phase(int $width, int $y, string $text): string
 function message(int $x1, int $x2, int $y, string $text, bool $ret): string
 {
     $stroke = $ret ? '#78868f' : '#2b3a4a';
-    $dash   = $ret ? ' stroke-dasharray="6 4"' : '';
+    $dash = $ret ? ' stroke-dasharray="6 4"' : '';
     $marker = $ret ? 'ret' : 'call';
-    $mid    = ($x1 + $x2) / 2;
-    $tw     = strlen($text) * 6.35 + 8;
+    $mid = ($x1 + $x2) / 2;
+    $tw = strlen($text) * 6.35 + 8;
 
     return '<g>'
         .'<rect x="'.($mid - $tw / 2).'" y="'.($y - 21).'" width="'.$tw.'" height="15" fill="#ffffff"/>'
@@ -192,19 +191,19 @@ function note(int $cx, int $y, int $h, array $lines): string
 
 // ---------------------------------------------------------------------------
 $P = [
-    'client'  => ['name' => 'Client',            'role' => 'Browser / Mobile',       'color' => '#b45309'],
-    'ctrl'    => ['name' => 'Controller',        'role' => 'FederatedAuthController', 'color' => '#1d4ed8'],
-    'broker'  => ['name' => 'Broker',            'role' => 'FederatedAuthBroker',     'color' => '#6d28d9'],
-    'state'   => ['name' => 'State Store',       'role' => 'OAuthStateStore',         'color' => '#0f766e'],
+    'client' => ['name' => 'Client',            'role' => 'Browser / Mobile',       'color' => '#b45309'],
+    'ctrl' => ['name' => 'Controller',        'role' => 'FederatedAuthController', 'color' => '#1d4ed8'],
+    'broker' => ['name' => 'Broker',            'role' => 'FederatedAuthBroker',     'color' => '#6d28d9'],
+    'state' => ['name' => 'State Store',       'role' => 'OAuthStateStore',         'color' => '#0f766e'],
     'adapter' => ['name' => 'Adapter',           'role' => 'ProviderAdapter',         'color' => '#0f766e'],
-    'idp'     => ['name' => 'Provider',          'role' => 'External IdP',            'color' => '#334155'],
-    'repo'    => ['name' => 'Link Repo',         'role' => 'IdentityLinkRepository',  'color' => '#047857'],
+    'idp' => ['name' => 'Provider',          'role' => 'External IdP',            'color' => '#334155'],
+    'repo' => ['name' => 'Link Repo',         'role' => 'IdentityLinkRepository',  'color' => '#047857'],
     'resolve' => ['name' => 'Resolver',          'role' => 'UserResolver',            'color' => '#047857'],
-    'provis'  => ['name' => 'Provisioner',       'role' => 'UserProvisioner',         'color' => '#b91c1c'],
-    'status'  => ['name' => 'Status Checker',    'role' => 'UserStatusChecker',       'color' => '#047857'],
-    'roles'   => ['name' => 'Role Mapper',       'role' => 'RoleMapper',              'color' => '#047857'],
-    'token'   => ['name' => 'Token Issuer',      'role' => 'TokenIssuer',             'color' => '#047857'],
-    'fmt'     => ['name' => 'Formatter',         'role' => 'AuthResponseFormatter',   'color' => '#1d4ed8'],
+    'provis' => ['name' => 'Provisioner',       'role' => 'UserProvisioner',         'color' => '#b91c1c'],
+    'status' => ['name' => 'Status Checker',    'role' => 'UserStatusChecker',       'color' => '#047857'],
+    'roles' => ['name' => 'Role Mapper',       'role' => 'RoleMapper',              'color' => '#047857'],
+    'token' => ['name' => 'Token Issuer',      'role' => 'TokenIssuer',             'color' => '#047857'],
+    'fmt' => ['name' => 'Formatter',         'role' => 'AuthResponseFormatter',   'color' => '#1d4ed8'],
 ];
 
 function pick(array $P, array $keys): array
@@ -249,7 +248,7 @@ $login = [
     ['kind' => 'msg', 'from' => 'broker', 'to' => 'repo',    'text' => 'findByProviderIdentity(provider, providerUserId)'],
     ['kind' => 'msg', 'from' => 'repo',   'to' => 'broker',  'text' => 'LinkedIdentity  (found)', 'style' => 'ret'],
     ['kind' => 'msg', 'from' => 'broker', 'to' => 'resolve', 'text' => 'resolveById(userId)'],
-    ['kind' => 'msg', 'from' => 'resolve','to' => 'broker',  'text' => 'local user', 'style' => 'ret'],
+    ['kind' => 'msg', 'from' => 'resolve', 'to' => 'broker',  'text' => 'local user', 'style' => 'ret'],
     ['kind' => 'msg', 'from' => 'broker', 'to' => 'status',  'text' => 'ensureCanLogin(user)  ·  blocks disabled users'],
     ['kind' => 'msg', 'from' => 'broker', 'to' => 'repo',    'text' => 'touch(link, identity)  ·  last_login_at, claims'],
     ['kind' => 'msg', 'from' => 'broker', 'to' => 'roles',   'text' => 'sync(user, identity)'],
