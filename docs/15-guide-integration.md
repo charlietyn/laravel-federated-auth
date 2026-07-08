@@ -1,45 +1,45 @@
-# 15 - Guia junior: integrar `laravel-federated-auth` con `rest-generic-class`
+# 15 - Junior guide: integrating `laravel-federated-auth` with `rest-generic-class`
 
-> Esta guia explica, paso a paso y con ejemplos sencillos, como usar la integracion opcional entre `ronu/laravel-federated-auth` y `ronu/rest-generic-class`.
+> This guide explains, step by step and with simple examples, how to use the optional integration between `ronu/laravel-federated-auth` and `ronu/rest-generic-class`.
 >
-> Objetivo: que un aprendiz entienda como devolver respuestas mas homogeneas y como incluir permisos efectivos en el login sin acoplar la autenticacion federada al CRUD generico.
+> Goal: help a learner understand how to return more homogeneous responses and how to include effective permissions in the login without coupling federated authentication to the generic CRUD.
 
 ---
 
-## 1. La idea en una frase
+## 1. The idea in one sentence
 
 ```text
-laravel-federated-auth autentica.
-rest-generic-class ayuda a presentar permisos y respuestas de forma homogenea.
+laravel-federated-auth authenticates.
+rest-generic-class helps present permissions and responses in a homogeneous way.
 ```
 
-No son la misma cosa.
+They are not the same thing.
 
-`laravel-federated-auth` responde:
+`laravel-federated-auth` answers:
 
 ```text
-Quien eres?
+Who are you?
 ```
 
-`rest-generic-class` ayuda a responder:
+`rest-generic-class` helps answer:
 
 ```text
-Que permisos tienes?
-Como exponemos datos REST de forma consistente?
+What permissions do you have?
+How do we expose REST data consistently?
 ```
 
 ---
 
-## 2. Que se implemento en la biblioteca
+## 2. What was implemented in the library
 
-Se agregaron dos contratos pequenos:
+Two small contracts were added:
 
 ```php
 AuthResponseFormatterInterface
 PermissionPayloadResolverInterface
 ```
 
-Tambien se agregaron implementaciones:
+Implementations were also added:
 
 ```text
 DefaultAuthResponseFormatter
@@ -49,96 +49,96 @@ RestGenericPermissionPayloadResolver
 RestGenericAuthResponseFormatter
 ```
 
-Lectura simple:
+Simple reading:
 
-| Clase | Para que sirve |
+| Class | What it is for |
 |---|---|
-| `AuthResponseFormatterInterface` | Define como se formatea la respuesta final del login. |
-| `DefaultAuthResponseFormatter` | Mantiene la respuesta clasica del paquete. |
-| `RestGenericAuthResponseFormatter` | Devuelve una respuesta estilo `ok/data/meta`. |
-| `PermissionPayloadResolverInterface` | Define como anexar permisos al login. |
-| `NullPermissionPayloadResolver` | No agrega permisos; es seguro por defecto. |
-| `RestGenericPermissionPayloadResolver` | Si RGC esta instalado y el usuario cumple contratos, anexa permisos efectivos. |
-| `RestGenericClassDetector` | Detecta en runtime si RGC esta disponible. |
+| `AuthResponseFormatterInterface` | Defines how the final login response is formatted. |
+| `DefaultAuthResponseFormatter` | Keeps the package's classic response. |
+| `RestGenericAuthResponseFormatter` | Returns an `ok/data/meta`-style response. |
+| `PermissionPayloadResolverInterface` | Defines how to append permissions to the login. |
+| `NullPermissionPayloadResolver` | Adds no permissions; safe by default. |
+| `RestGenericPermissionPayloadResolver` | If RGC is installed and the user satisfies the contracts, appends effective permissions. |
+| `RestGenericClassDetector` | Detects at runtime whether RGC is available. |
 
 ---
 
-## 3. Por que se hizo con contratos
+## 3. Why it was done with contracts
 
-Un junior podria pensar:
+A junior might think:
 
 ```text
-Si queremos usar RGC, pongamos RGC como dependencia obligatoria.
+If we want to use RGC, let's make RGC a hard dependency.
 ```
 
-Eso seria un error.
+That would be a mistake.
 
-La autenticacion federada debe poder funcionar en proyectos que no usan RGC.
+Federated authentication must be able to work in projects that do not use RGC.
 
-Por eso se hizo asi:
+That is why it was done like this:
 
 ```text
-Core independiente
-    + contratos pequenos
-    + integracion opcional
+Independent core
+    + small contracts
+    + optional integration
 ```
 
-Esto permite cuatro escenarios:
+This enables four scenarios:
 
 ```text
-Proyecto A: solo laravel-federated-auth
-Proyecto B: laravel-federated-auth + rest-generic-class
-Proyecto C: laravel-federated-auth + Spatie directo
-Proyecto D: laravel-federated-auth + permisos propios
+Project A: laravel-federated-auth only
+Project B: laravel-federated-auth + rest-generic-class
+Project C: laravel-federated-auth + Spatie directly
+Project D: laravel-federated-auth + custom permissions
 ```
 
 ---
 
-## 4. Instalacion opcional
+## 4. Optional installation
 
-Primero instalas la auth:
+First you install auth:
 
 ```bash
 composer require ronu/laravel-federated-auth
 ```
 
-Si tambien quieres RGC:
+If you also want RGC:
 
 ```bash
 composer require ronu/rest-generic-class
 ```
 
-Importante:
+Important:
 
 ```text
-ronu/rest-generic-class aparece como suggest, no como require.
+ronu/rest-generic-class appears as a suggest, not as a require.
 ```
 
-Eso significa:
+That means:
 
 ```text
-Recomendado para integracion opcional, pero no obligatorio.
+Recommended for optional integration, but not mandatory.
 ```
 
 ---
 
-## 5. Configuracion basica sin RGC
+## 5. Basic configuration without RGC
 
-Por defecto, el paquete usa:
+By default, the package uses:
 
 ```php
 PermissionPayloadResolverInterface::class => NullPermissionPayloadResolver::class,
 AuthResponseFormatterInterface::class => DefaultAuthResponseFormatter::class,
 ```
 
-Esto significa:
+This means:
 
 ```text
-No se anexan permisos.
-La respuesta se mantiene parecida al formato original.
+No permissions are appended.
+The response stays close to the original format.
 ```
 
-Ejemplo de respuesta:
+Example response:
 
 ```json
 {
@@ -159,9 +159,9 @@ Ejemplo de respuesta:
 
 ---
 
-## 6. Activar permisos RGC en respuesta de login
+## 6. Enabling RGC permissions in the login response
 
-En `config/federated-auth.php`, cambia los bindings:
+In `config/federated-auth.php`, change the bindings:
 
 ```php
 use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
@@ -170,38 +170,38 @@ use Ronu\LaravelFederatedAuth\Integrations\RestGenericClass\RestGenericAuthRespo
 use Ronu\LaravelFederatedAuth\Integrations\RestGenericClass\RestGenericPermissionPayloadResolver;
 
 'bindings' => [
-    // otros bindings...
+    // other bindings...
 
     PermissionPayloadResolverInterface::class => RestGenericPermissionPayloadResolver::class,
     AuthResponseFormatterInterface::class => RestGenericAuthResponseFormatter::class,
 ],
 ```
 
-Activa permisos en la respuesta:
+Enable permissions in the response:
 
 ```env
 FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=true
 FEDERATED_AUTH_RGC_ENABLED=true
 ```
 
-Nota:
+Note:
 
 ```text
-FEDERATED_AUTH_RGC_ENABLED documenta la intencion del proyecto.
-El detector real verifica si las interfaces de RGC existen.
+FEDERATED_AUTH_RGC_ENABLED documents the project's intent.
+The real detector checks whether the RGC interfaces exist.
 ```
 
 ---
 
-## 7. Como debe estar preparado tu User
+## 7. How your User must be prepared
 
-Para que RGC pueda devolver permisos, tu usuario debe implementar:
+For RGC to return permissions, your user must implement:
 
 ```php
 Ronu\RestGenericClass\Core\Support\Permissions\Contracts\ProvidesRoles
 ```
 
-Ejemplo usando Spatie:
+Example using Spatie:
 
 ```php
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -214,11 +214,11 @@ class User extends Authenticatable implements ProvidesRoles
     use HasRoles;
     use HasReadableUserPermissions;
 
-    // Si tu relacion de roles se llama 'roles', no necesitas declarar nada mas.
+    // If your roles relation is named 'roles', you do not need to declare anything else.
 }
 ```
 
-Si tu relacion no se llama `roles`, por ejemplo se llama `array_role`:
+If your relation is not named `roles`, for example it is named `array_role`:
 
 ```php
 class User extends Authenticatable implements ProvidesRoles
@@ -236,15 +236,15 @@ class User extends Authenticatable implements ProvidesRoles
 
 ---
 
-## 8. Como debe estar preparado tu Role
+## 8. How your Role must be prepared
 
-Tu modelo Role debe implementar:
+Your Role model must implement:
 
 ```php
 Ronu\RestGenericClass\Core\Support\Permissions\Contracts\ProvidesRolePermissions
 ```
 
-Ejemplo:
+Example:
 
 ```php
 use Ronu\RestGenericClass\Core\Support\Permissions\Contracts\ProvidesRolePermissions;
@@ -257,39 +257,39 @@ class Role extends SpatieRole implements ProvidesRolePermissions
 }
 ```
 
-Ese trait sabe leer la relacion `enabled_permissions` cuando existe.
+That trait knows how to read the `enabled_permissions` relation when it exists.
 
 ---
 
-## 9. Flujo completo con RGC activado
+## 9. Complete flow with RGC enabled
 
 ```text
-1. Usuario entra con Google.
-2. laravel-federated-auth valida Google.
-3. Se obtiene ExternalIdentity.
-4. Se resuelve usuario local.
-5. Se emite JWT local.
-6. AuthResponseFormatterInterface formatea la respuesta.
-7. PermissionPayloadResolverInterface intenta anexar permisos.
-8. RestGenericPermissionPayloadResolver verifica:
-      - RGC esta instalado?
-      - User implementa ProvidesRoles?
-      - User tiene permissionsPayload()?
-9. Si todo esta bien, anexa permisos.
-10. Si algo falta, no rompe el login; simplemente omite permisos.
+1. The user signs in with Google.
+2. laravel-federated-auth validates Google.
+3. The ExternalIdentity is obtained.
+4. The local user is resolved.
+5. A local JWT is issued.
+6. AuthResponseFormatterInterface formats the response.
+7. PermissionPayloadResolverInterface attempts to append permissions.
+8. RestGenericPermissionPayloadResolver checks:
+      - Is RGC installed?
+      - Does User implement ProvidesRoles?
+      - Does User have permissionsPayload()?
+9. If everything is fine, it appends permissions.
+10. If something is missing, it does not break the login; it simply omits permissions.
 ```
 
-Esto es muy importante:
+This is very important:
 
 ```text
-Un fallo de permisos opcionales no debe bloquear la autenticacion.
+A failure of optional permissions must not block authentication.
 ```
 
 ---
 
-## 10. Respuesta estilo RGC
+## 10. RGC-style response
 
-Con `RestGenericAuthResponseFormatter`, la respuesta queda asi:
+With `RestGenericAuthResponseFormatter`, the response looks like this:
 
 ```json
 {
@@ -332,104 +332,104 @@ Con `RestGenericAuthResponseFormatter`, la respuesta queda asi:
 }
 ```
 
-Este formato es mas comodo para frontends porque separa:
+This format is more convenient for frontends because it separates:
 
 ```text
-user        -> datos del usuario
-auth        -> datos del token
-federated   -> datos del login externo
-permissions -> permisos efectivos
-meta        -> contexto de la peticion
+user        -> user data
+auth        -> token data
+federated   -> external login data
+permissions -> effective permissions
+meta        -> request context
 ```
 
 ---
 
-## 11. Que pasa si RGC no esta instalado
+## 11. What happens if RGC is not installed
 
-Si configuras accidentalmente el resolver RGC pero RGC no esta instalado, el detector lo evita.
+If you accidentally configure the RGC resolver but RGC is not installed, the detector prevents it.
 
-Resultado:
+Result:
 
 ```text
-No se agregan permisos.
-No se rompe el login.
+No permissions are added.
+The login is not broken.
 ```
 
-El objetivo es mantener seguridad y disponibilidad.
+The goal is to keep both security and availability.
 
 ---
 
-## 12. Errores comunes
+## 12. Common errors
 
-### 12.1. No aparecen permisos en la respuesta
+### 12.1. Permissions do not appear in the response
 
-Revisa:
+Check:
 
 ```env
 FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=true
 ```
 
-Revisa bindings:
+Check the bindings:
 
 ```php
 PermissionPayloadResolverInterface::class => RestGenericPermissionPayloadResolver::class,
 ```
 
-Revisa que el modelo User implemente:
+Check that the User model implements:
 
 ```php
 ProvidesRoles
 ```
 
-Revisa que use:
+Check that it uses:
 
 ```php
 HasReadableUserPermissions
 ```
 
-### 12.2. Error de contratos RGC
+### 12.2. RGC contract error
 
-Si RGC dice que falta un contrato, normalmente es porque:
+If RGC says a contract is missing, it is usually because:
 
 ```text
-User no implementa ProvidesRoles
-Role no implementa ProvidesRolePermissions
-la relacion de roles tiene otro nombre y no declaraste ROLES_RELATION
+User does not implement ProvidesRoles
+Role does not implement ProvidesRolePermissions
+the roles relation has another name and you did not declare ROLES_RELATION
 ```
 
-### 12.3. Login funciona pero permissions viene vacio
+### 12.3. Login works but permissions is empty
 
-Esto puede ser correcto si el usuario no tiene roles o permisos.
+This may be correct if the user has no roles or permissions.
 
-Prueba el endpoint de RGC:
+Test the RGC endpoint:
 
 ```http
 GET /api/permissions
 Authorization: Bearer <token>
 ```
 
-Si ese endpoint no devuelve permisos, el problema esta en la configuracion de RGC/roles, no en la federated auth.
+If that endpoint returns no permissions, the problem is in the RGC/roles configuration, not in federated auth.
 
 ---
 
-## 13. Seguridad para juniors
+## 13. Security for juniors
 
-No hagas esto:
+Do not do this:
 
 ```text
-Dar rol Admin porque alguien entro con Google.
+Grant the Admin role because someone signed in with Google.
 ```
 
-Google confirma identidad, no autoridad dentro de tu negocio.
+Google confirms identity, not authority within your business.
 
-Correcto:
+Correct:
 
 ```text
 Google/Facebook/Apple -> Client
-Keycloak/OIDC empresarial -> roles mapeables con allowlist
+Keycloak/OIDC enterprise -> roles mappable with an allowlist
 ```
 
-Ejemplo de allowlist mental:
+Mental allowlist example:
 
 ```php
 [
@@ -441,22 +441,22 @@ Ejemplo de allowlist mental:
 
 ---
 
-## 14. Como probarlo manualmente
+## 14. How to test it manually
 
-### Caso A: sin permisos
+### Case A: without permissions
 
 ```env
 FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=false
 ```
 
-Login esperado:
+Expected login:
 
 ```text
-Devuelve user + token.
-No devuelve permissions.
+Returns user + token.
+Does not return permissions.
 ```
 
-### Caso B: con permisos RGC
+### Case B: with RGC permissions
 
 ```env
 FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=true
@@ -470,42 +470,42 @@ PermissionPayloadResolverInterface::class => RestGenericPermissionPayloadResolve
 AuthResponseFormatterInterface::class => RestGenericAuthResponseFormatter::class,
 ```
 
-Login esperado:
+Expected login:
 
 ```text
-Devuelve ok/data/meta.
-Dentro de data devuelve user, auth, federated y permissions.
+Returns ok/data/meta.
+Inside data it returns user, auth, federated and permissions.
 ```
 
 ---
 
-## 15. Checklist junior
+## 15. Junior checklist
 
-- [ ] Instale `ronu/laravel-federated-auth`.
-- [ ] Instale `ronu/rest-generic-class` solo si quiero integracion de permisos/respuesta.
-- [ ] Configure Google/Facebook/Apple/Keycloak.
-- [ ] Configure `FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=true` si quiero permisos en login.
-- [ ] Cambie `PermissionPayloadResolverInterface` al resolver RGC.
-- [ ] Cambie `AuthResponseFormatterInterface` al formatter RGC si quiero `ok/data/meta`.
-- [ ] Mi User implementa `ProvidesRoles`.
-- [ ] Mi Role implementa `ProvidesRolePermissions`.
-- [ ] Probe `/api/permissions` con el token local.
-- [ ] Verifique que Admin no se crea automaticamente desde Google/Facebook/Apple.
+- [ ] Installed `ronu/laravel-federated-auth`.
+- [ ] Installed `ronu/rest-generic-class` only if I want the permissions/response integration.
+- [ ] Configured Google/Facebook/Apple/Keycloak.
+- [ ] Set `FEDERATED_AUTH_RESPONSE_INCLUDE_PERMISSIONS=true` if I want permissions in the login.
+- [ ] Changed `PermissionPayloadResolverInterface` to the RGC resolver.
+- [ ] Changed `AuthResponseFormatterInterface` to the RGC formatter if I want `ok/data/meta`.
+- [ ] My User implements `ProvidesRoles`.
+- [ ] My Role implements `ProvidesRolePermissions`.
+- [ ] Tested `/api/permissions` with the local token.
+- [ ] Verified that Admin is not created automatically from Google/Facebook/Apple.
 
 ---
 
-## 16. Resumen final
+## 16. Final summary
 
-La integracion correcta es opcional:
+The correct integration is optional:
 
 ```text
-Si RGC existe, enriquecemos.
-Si RGC no existe, autenticamos igual.
+If RGC exists, we enrich.
+If RGC does not exist, we authenticate anyway.
 ```
 
-La frase clave:
+The key sentence:
 
 ```text
-No acoples la puerta de entrada a la biblioteca de CRUD.
-Conecta ambas mediante contratos pequenos.
+Do not couple the entry door to the CRUD library.
+Connect both through small contracts.
 ```

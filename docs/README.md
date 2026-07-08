@@ -6,7 +6,7 @@ The package is designed for senior Laravel systems where the users table, schema
 
 Recommended order:
 
-0. `00-simple-guide.md` - Spanish beginner-friendly guide with examples, flows and security explanations.
+0. `00-simple-guide.md` - Beginner-friendly guide with examples, flows and security explanations.
 1. `01-installation.md`
 2. `02-configuration-line-by-line.md`
 3. `03-core-architecture.md`
@@ -20,7 +20,7 @@ Recommended order:
 11. `11-line-by-line-request-flow.md`
 12. `12-oauth-hardening.md`
 13. `13-apple-provider.md`
-14. `14-integracion-rest-generic-class.md` - Optional integration analysis with `ronu/rest-generic-class`.
+14. `14-rest-generic-class-integration.md` - Optional integration analysis with `ronu/rest-generic-class`.
 15. `15-guide-integration.md` - Junior guide for enabling optional RGC response/permissions integration.
 
 Core idea:

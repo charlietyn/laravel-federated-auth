@@ -1,37 +1,37 @@
-# 00 - Guia extensa para juniors: como usar `ronu/laravel-federated-auth`
+# 00 - Extensive junior guide: how to use `ronu/laravel-federated-auth`
 
-> Esta guia esta escrita para desarrolladores junior o aprendices que quieren entender como funciona el login federado en Laravel usando Google, Facebook, Apple, Keycloak u otro proveedor OIDC.
+> This guide is written for junior developers or learners who want to understand how federated login works in Laravel using Google, Facebook, Apple, Keycloak or another OIDC provider.
 >
-> La idea no es solo copiar codigo. La idea es que entiendas que problema resuelve la biblioteca, que datos se guardan, que flujo ocurre por dentro y como se conecta con tu propio sistema de usuarios, roles y permisos.
+> The goal is not just to copy code. The goal is for you to understand what problem the library solves, what data is stored, what flow happens internally and how it connects to your own users, roles and permissions system.
 
 ---
 
-## 1. Que problema resuelve esta biblioteca
+## 1. What problem this library solves
 
-Normalmente, cuando una aplicacion Laravel necesita login con Google, Facebook o Apple, muchos desarrolladores hacen algo asi:
+Normally, when a Laravel application needs login with Google, Facebook or Apple, many developers do something like this:
 
 ```text
-Boton Google -> Socialite -> buscar usuario por email -> crear usuario -> login
+Google button -> Socialite -> find user by email -> create user -> login
 ```
 
-Eso puede funcionar en proyectos pequenos, pero en sistemas reales aparecen problemas:
+That can work in small projects, but in real systems problems appear:
 
-- tu tabla de usuarios no siempre se llama `users`;
-- tu modelo no siempre es `App\Models\User`;
-- el email no siempre es unico;
-- un mismo email puede existir como cliente, veterinario, tecnico o administrador;
-- Google, Facebook y Apple no devuelven los mismos datos;
-- Apple puede devolver un email privado relay;
-- Facebook a veces no devuelve email;
-- tu API puede usar JWT, Sanctum, cookies de sesion u otro sistema;
-- un usuario local puede tener varias identidades externas vinculadas;
-- no todos los usuarios deben poder auto-registrarse;
-- un administrador no debe crearse automaticamente porque alguien hizo login con Google.
+- your users table is not always called `users`;
+- your model is not always `App\Models\User`;
+- the email is not always unique;
+- the same email may exist as a client, veterinarian, technician or administrator;
+- Google, Facebook and Apple do not return the same data;
+- Apple may return a private relay email;
+- Facebook sometimes does not return an email;
+- your API may use JWT, Sanctum, session cookies or another system;
+- a local user may have several external identities linked;
+- not every user should be allowed to self-register;
+- an administrator must not be created automatically just because someone logged in with Google.
 
-Esta biblioteca organiza ese problema usando una arquitectura por responsabilidades:
+This library organizes that problem using a responsibility-based architecture:
 
 ```text
-Proveedor externo
+External provider
     -> Adapter
     -> ExternalIdentity
     -> Broker
@@ -41,60 +41,60 @@ Proveedor externo
     -> Token Issuer
 ```
 
-En palabras simples:
+In simple words:
 
 ```text
-El proveedor dice quien es la persona.
-Tu aplicacion decide quien es localmente y que permisos tiene.
+The provider states who the person is.
+Your application decides who they are locally and what permissions they have.
 ```
 
 ---
 
-## 2. Conceptos basicos antes de tocar codigo
+## 2. Basic concepts before touching code
 
-### 2.1. Autenticacion
+### 2.1. Authentication
 
-Autenticacion significa responder:
+Authentication means answering:
 
 ```text
-Quien eres?
+Who are you?
 ```
 
-Ejemplo:
+Example:
 
 ```text
-Soy carlos@example.com y Google confirma que esta cuenta existe.
+I am carlos@example.com and Google confirms this account exists.
 ```
 
-### 2.2. Autorizacion
+### 2.2. Authorization
 
-Autorizacion significa responder:
+Authorization means answering:
 
 ```text
-Que puedes hacer?
+What can you do?
 ```
 
-Ejemplo:
+Example:
 
 ```text
-Puedes crear citas, pero no puedes administrar usuarios.
+You can create appointments, but you cannot manage users.
 ```
 
 ### 2.3. OAuth2
 
-OAuth2 es principalmente un protocolo de autorizacion. Permite que una aplicacion acceda a recursos de otro sistema con permiso del usuario.
+OAuth2 is primarily an authorization protocol. It lets an application access resources of another system with the user's permission.
 
-Ejemplo:
+Example:
 
 ```text
-Permitir que mi app lea tu email de Google.
+Allow my app to read your Google email.
 ```
 
 ### 2.4. OpenID Connect / OIDC
 
-OIDC es una capa encima de OAuth2 que sirve para autenticacion.
+OIDC is a layer on top of OAuth2 used for authentication.
 
-OIDC permite obtener un `id_token`, que normalmente contiene claims como:
+OIDC lets you obtain an `id_token`, which usually contains claims such as:
 
 ```json
 {
@@ -107,28 +107,28 @@ OIDC permite obtener un `id_token`, que normalmente contiene claims como:
 
 ### 2.5. Provider user id / `sub`
 
-Este es el identificador real del usuario en el proveedor.
+This is the real identifier of the user at the provider.
 
-Para Google, Apple, Keycloak u OIDC suele venir como:
+For Google, Apple, Keycloak or OIDC it usually comes as:
 
 ```text
 sub
 ```
 
-Para Facebook puede venir como:
+For Facebook it may come as:
 
 ```text
 id
 ```
 
-La regla de oro es:
+The golden rule is:
 
 ```text
-No uses el email como identidad primaria.
-Usa provider + provider_user_id.
+Do not use the email as the primary identity.
+Use provider + provider_user_id.
 ```
 
-Ejemplo:
+Example:
 
 ```text
 google + 107691503500061507151
@@ -138,46 +138,46 @@ facebook + 123456789
 
 ---
 
-## 3. Que guarda tu sistema local
+## 3. What your local system stores
 
-El proveedor externo no reemplaza tu base de datos local.
+The external provider does not replace your local database.
 
-Tu aplicacion debe seguir teniendo una tabla local de usuarios, por ejemplo:
+Your application must still keep a local users table, for example:
 
 ```text
 users
 ```
 
-O en un sistema modular:
+Or in a modular system:
 
 ```text
 security.users
 ```
 
-La biblioteca crea o usa una tabla de vinculos externos:
+The library creates or uses an external links table:
 
 ```text
 federated_auth_identities
 ```
 
-Esa tabla responde:
+That table answers:
 
 ```text
-Esta cuenta de Google/Facebook/Apple corresponde a que usuario local?
+Which local user does this Google/Facebook/Apple account correspond to?
 ```
 
-Ejemplo:
+Example:
 
 | id | user_id | provider | provider_user_id | provider_email |
 |---:|---:|---|---|---|
 | 1 | 25 | google | 107691503500061507151 | client@example.com |
 | 2 | 25 | apple | 000123.abc456def789 | private@privaterelay.appleid.com |
 
-En este ejemplo, el usuario local `25` puede entrar con Google o Apple.
+In this example, local user `25` can sign in with either Google or Apple.
 
 ---
 
-## 4. Instalacion basica
+## 4. Basic installation
 
 ```bash
 composer require ronu/laravel-federated-auth
@@ -186,27 +186,27 @@ php artisan vendor:publish --tag=federated-auth-migrations
 php artisan migrate
 ```
 
-Despues de publicar la configuracion, revisa:
+After publishing the configuration, review:
 
 ```text
 config/federated-auth.php
 ```
 
-Ahi se definen:
+That is where you define:
 
-- proveedores habilitados;
-- rutas;
-- modelo de usuario local;
-- columnas de usuario;
-- tabla de vinculos externos;
-- reglas de seguridad;
-- contratos personalizados.
+- enabled providers;
+- routes;
+- the local user model;
+- user columns;
+- the external links table;
+- security rules;
+- custom contracts.
 
 ---
 
-## 5. Configuracion minima para un proyecto Laravel normal
+## 5. Minimal configuration for a normal Laravel project
 
-Supongamos un proyecto con:
+Assume a project with:
 
 ```text
 App\Models\User
@@ -216,7 +216,7 @@ users.email
 users.password
 ```
 
-Configura:
+Configure:
 
 ```php
 'user' => [
@@ -233,15 +233,15 @@ Configura:
 ],
 ```
 
-Si tu aplicacion no tiene estados de usuario, puedes dejar `status` como `null`.
+If your application has no user statuses, you can leave `status` as `null`.
 
-Si tu aplicacion no diferencia tipos de usuario, puedes dejar `type` como `null`.
+If your application does not differentiate user types, you can leave `type` as `null`.
 
 ---
 
-## 6. Configuracion para un sistema modular tipo KwikVet
+## 6. Configuration for a modular system
 
-Supongamos:
+Assume:
 
 ```text
 Modules\security\Models\Users
@@ -250,7 +250,7 @@ status_id
 user_type
 ```
 
-Configura:
+Configure:
 
 ```php
 'user' => [
@@ -272,7 +272,7 @@ Configura:
 ],
 ```
 
-Y la tabla de vinculos externos puede vivir en tu schema de seguridad:
+And the external links table can live in your security schema:
 
 ```php
 'identity_store' => [
@@ -287,59 +287,59 @@ Y la tabla de vinculos externos puede vivir en tu schema de seguridad:
 
 ---
 
-## 7. Flujo de login web con Google
+## 7. Web login flow with Google
 
-### 7.1. El usuario pulsa el boton
+### 7.1. The user presses the button
 
 Frontend:
 
 ```html
 <a href="https://api.example.com/api/auth/federated/google/redirect">
-    Continuar con Google
+    Continue with Google
 </a>
 ```
 
-### 7.2. Laravel recibe la peticion
+### 7.2. Laravel receives the request
 
 ```http
 GET /api/auth/federated/google/redirect
 ```
 
-La biblioteca:
+The library:
 
-1. valida que Google este habilitado;
-2. crea un `state` de un solo uso;
-3. opcionalmente genera `nonce`;
-4. guarda metadata como IP, user-agent, tenant, channel;
-5. redirige a Google.
+1. validates that Google is enabled;
+2. creates a one-time `state`;
+3. optionally generates a `nonce`;
+4. stores metadata such as IP, user-agent, tenant, channel;
+5. redirects to Google.
 
-### 7.3. Google autentica al usuario
+### 7.3. Google authenticates the user
 
-Google muestra su pantalla:
+Google shows its screen:
 
 ```text
-Elige una cuenta
-Permitir acceso a perfil y email
+Choose an account
+Allow access to profile and email
 ```
 
-### 7.4. Google devuelve al callback
+### 7.4. Google returns to the callback
 
 ```http
 GET /api/auth/federated/google/callback?code=abc&state=xyz
 ```
 
-La biblioteca:
+The library:
 
-1. consume el `state`;
-2. rechaza si el state no existe, expiro o ya se uso;
-3. obtiene los datos del usuario desde Google;
-4. crea un `ExternalIdentity`;
-5. busca si ya hay una cuenta vinculada;
-6. si no existe, provisiona usuario si esta permitido;
-7. crea el vinculo externo;
-8. emite tu token local.
+1. consumes the `state`;
+2. rejects it if the state does not exist, expired or was already used;
+3. fetches the user data from Google;
+4. builds an `ExternalIdentity`;
+5. checks whether a linked account already exists;
+6. if it does not exist, provisions a user if allowed;
+7. creates the external link;
+8. issues your local token.
 
-### 7.5. Respuesta esperada
+### 7.5. Expected response
 
 ```json
 {
@@ -362,17 +362,17 @@ La biblioteca:
 
 ---
 
-## 8. Flujo de login para movil o SPA
+## 8. Login flow for mobile or SPA
 
-En movil, muchas veces no se usa redirect del backend. Se usa el SDK nativo.
+On mobile, the backend redirect is often not used. The native SDK is used instead.
 
-Ejemplo:
+Example:
 
 ```text
 React Native App -> Google SDK -> access_token -> Laravel API
 ```
 
-La app llama:
+The app calls:
 
 ```http
 POST /api/auth/federated/google/token
@@ -385,9 +385,9 @@ Content-Type: application/json
 }
 ```
 
-Laravel valida el token con el provider y despues ejecuta el mismo flujo local.
+Laravel validates the token with the provider and then runs the same local flow.
 
-Para Apple movil, normalmente se envia `id_token`:
+For Apple mobile, an `id_token` is normally sent:
 
 ```http
 POST /api/auth/federated/apple/token
@@ -402,11 +402,11 @@ Content-Type: application/json
 
 ---
 
-## 9. Que es `ExternalIdentity`
+## 9. What `ExternalIdentity` is
 
-`ExternalIdentity` es una version normalizada de los datos que devuelve cada proveedor.
+`ExternalIdentity` is a normalized version of the data returned by each provider.
 
-Google, Facebook, Apple y Keycloak devuelven estructuras diferentes. La biblioteca las convierte a una estructura comun:
+Google, Facebook, Apple and Keycloak return different structures. The library converts them into a common structure:
 
 ```text
 provider
@@ -425,7 +425,7 @@ refreshToken
 expiresIn
 ```
 
-Ejemplo con Google:
+Example with Google:
 
 ```php
 new ExternalIdentity(
@@ -438,7 +438,7 @@ new ExternalIdentity(
 );
 ```
 
-Ejemplo con Apple:
+Example with Apple:
 
 ```php
 new ExternalIdentity(
@@ -452,11 +452,11 @@ new ExternalIdentity(
 
 ---
 
-## 10. Que es `AuthContext`
+## 10. What `AuthContext` is
 
-`AuthContext` transporta informacion de la peticion actual.
+`AuthContext` carries information about the current request.
 
-Ejemplo:
+Example:
 
 ```text
 provider = google
@@ -469,7 +469,7 @@ state = xyz
 metadata = ip + user_agent
 ```
 
-Esto permite que la misma biblioteca funcione en escenarios diferentes:
+This lets the same library work in different scenarios:
 
 ```text
 admin panel
@@ -481,13 +481,13 @@ enterprise login
 
 ---
 
-## 11. Que es `FederatedAuthBroker`
+## 11. What `FederatedAuthBroker` is
 
-El broker es el coordinador principal.
+The broker is the main coordinator.
 
-No habla directamente con Google. No crea usuarios por su cuenta. No decide permisos finales por si solo.
+It does not talk directly to Google. It does not create users on its own. It does not decide final permissions by itself.
 
-Coordina piezas:
+It coordinates the pieces:
 
 ```text
 Provider Adapter
@@ -499,29 +499,29 @@ RoleMapper
 TokenIssuer
 ```
 
-Piensalo como un director de orquesta.
+Think of it as an orchestra conductor.
 
 ---
 
-## 12. Registro automatico: `UserProvisionerInterface`
+## 12. Automatic registration: `UserProvisionerInterface`
 
-Cuando un usuario entra por primera vez y no existe vinculo externo, pueden pasar dos cosas:
+When a user signs in for the first time and no external link exists, two things can happen:
 
-### Caso A: auto-provision desactivado
-
-```text
-No existe usuario local -> denegar login
-```
-
-Esto es recomendado para administradores, tecnicos, veterinarios o usuarios empresariales.
-
-### Caso B: auto-provision activado
+### Case A: auto-provision disabled
 
 ```text
-No existe usuario local -> crear usuario local -> crear perfil -> asignar rol -> crear vinculo -> login
+No local user exists -> deny login
 ```
 
-Para eso debes implementar:
+This is recommended for administrators, technicians, veterinarians or enterprise users.
+
+### Case B: auto-provision enabled
+
+```text
+No local user exists -> create local user -> create profile -> assign role -> create link -> login
+```
+
+For that you must implement:
 
 ```php
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -559,7 +559,7 @@ final class ClientUserProvisioner implements UserProvisionerInterface
 }
 ```
 
-Luego lo registras en config:
+Then you register it in config:
 
 ```php
 'bindings' => [
@@ -569,21 +569,21 @@ Luego lo registras en config:
 
 ---
 
-## 13. Resolver usuarios existentes: `UserResolverInterface`
+## 13. Resolving existing users: `UserResolverInterface`
 
-El resolver busca usuarios locales.
+The resolver looks up local users.
 
-La biblioteca trae un resolver configurable que puede buscar:
+The library ships a configurable resolver that can look up:
 
 ```text
-por id
-por email
-por email + user_type
+by id
+by email
+by email + user_type
 ```
 
-Pero en sistemas complejos puedes necesitar uno propio.
+But in complex systems you may need your own.
 
-Ejemplo:
+Example:
 
 ```php
 final class TenantAwareUserResolver implements UserResolverInterface
@@ -614,24 +614,24 @@ final class TenantAwareUserResolver implements UserResolverInterface
 
 ---
 
-## 14. Emision de token local: `TokenIssuerInterface`
+## 14. Issuing the local token: `TokenIssuerInterface`
 
-El provider externo no debe ser el token final de tu app.
+The external provider must not be the final token of your app.
 
-Flujo correcto:
+Correct flow:
 
 ```text
-Google token -> validar identidad -> emitir token local de mi API
+Google token -> validate identity -> issue local token for my API
 ```
 
-La biblioteca permite emitir:
+The library lets you issue:
 
 - JWT;
 - Sanctum token;
-- cookie de sesion;
-- token personalizado.
+- session cookie;
+- custom token.
 
-Ejemplo JWT:
+JWT example:
 
 ```php
 final class ApiJwtTokenIssuer implements TokenIssuerInterface
@@ -652,31 +652,31 @@ final class ApiJwtTokenIssuer implements TokenIssuerInterface
 
 ---
 
-## 15. Roles y permisos: donde se conectan
+## 15. Roles and permissions: where they connect
 
-No confundas login federado con permisos.
+Do not confuse federated login with permissions.
 
-El proveedor dice:
-
-```text
-Esta persona es la cuenta Google X.
-```
-
-Tu sistema dice:
+The provider says:
 
 ```text
-Esta persona local es Client y puede crear citas.
+This person is Google account X.
 ```
 
-### Regla recomendada
+Your system says:
 
 ```text
-Google/Facebook/Apple -> solo auto-provisionan Client.
-Admin/Veterinarian/Technician -> requieren validacion interna.
-Keycloak/OIDC enterprise -> puede mapear roles externos si confias en ese IdP.
+This local person is a Client and can create appointments.
 ```
 
-Ejemplo `RoleMapperInterface`:
+### Recommended rule
+
+```text
+Google/Facebook/Apple -> only auto-provision Client.
+Admin/Veterinarian/Technician -> require internal validation.
+Keycloak/OIDC enterprise -> may map external roles if you trust that IdP.
+```
+
+Example `RoleMapperInterface`:
 
 ```php
 final class AppRoleMapper implements RoleMapperInterface
@@ -699,11 +699,11 @@ final class AppRoleMapper implements RoleMapperInterface
 
 ---
 
-## 16. Vincular otra cuenta externa
+## 16. Linking another external account
 
-Un usuario ya autenticado puede vincular Google, Facebook o Apple.
+An already authenticated user can link Google, Facebook or Apple.
 
-Ejemplo:
+Example:
 
 ```http
 POST /api/auth/federated/google/link/token
@@ -715,30 +715,30 @@ Content-Type: application/json
 }
 ```
 
-La biblioteca valida:
+The library validates:
 
-1. que el usuario local este autenticado;
-2. que el token externo sea valido;
-3. que esa identidad externa no pertenezca a otro usuario;
-4. que el vinculo se pueda crear o actualizar.
+1. that the local user is authenticated;
+2. that the external token is valid;
+3. that the external identity does not belong to another user;
+4. that the link can be created or updated.
 
 ---
 
-## 17. Desvincular proveedor
+## 17. Unlinking a provider
 
 ```http
 DELETE /api/auth/federated/google/unlink
 Authorization: Bearer local-jwt
 ```
 
-La biblioteca evita un error comun:
+The library prevents a common mistake:
 
 ```text
-Si el usuario no tiene password local y solo tiene una identidad externa,
-no permite eliminar la ultima identidad.
+If the user has no local password and only has one external identity,
+it does not allow removing the last identity.
 ```
 
-Eso evita dejar al usuario sin forma de entrar.
+That avoids leaving the user with no way to sign in.
 
 ---
 
@@ -753,7 +753,7 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=https://api.example.com/api/auth/federated/google/callback
 ```
 
-Recomendado:
+Recommended:
 
 ```php
 'google' => [
@@ -765,7 +765,7 @@ Recomendado:
 ]
 ```
 
-Usa Google para login de clientes, no para crear administradores automaticamente.
+Use Google for client login, not to create administrators automatically.
 
 ---
 
@@ -780,9 +780,9 @@ FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
 FACEBOOK_REDIRECT_URI=https://api.example.com/api/auth/federated/facebook/callback
 ```
 
-Facebook puede no devolver email.
+Facebook may not return an email.
 
-Recomendado:
+Recommended:
 
 ```php
 'facebook' => [
@@ -795,7 +795,7 @@ Recomendado:
 ]
 ```
 
-No asumas que el email de Facebook siempre es fuerte o verificado.
+Do not assume that the Facebook email is always strong or verified.
 
 ---
 
@@ -812,9 +812,9 @@ APPLE_PRIVATE_KEY_PATH=/secure/path/AuthKey_ABC123DEFG.p8
 APPLE_REDIRECT_URI=https://api.example.com/api/auth/federated/apple/callback
 ```
 
-Apple usa un `client_secret` especial, que es un JWT firmado con tu private key `.p8`.
+Apple uses a special `client_secret`, which is a JWT signed with your `.p8` private key.
 
-La biblioteca puede generarlo si configuras:
+The library can generate it if you configure:
 
 ```text
 APPLE_TEAM_ID
@@ -823,15 +823,15 @@ APPLE_CLIENT_ID
 APPLE_PRIVATE_KEY_PATH
 ```
 
-Apple puede devolver email privado relay:
+Apple may return a private relay email:
 
 ```text
 abc123@privaterelay.appleid.com
 ```
 
-Eso es normal. Guardalo como email de contacto, pero no lo uses como identidad primaria.
+That is normal. Store it as a contact email, but do not use it as the primary identity.
 
-La identidad primaria sigue siendo:
+The primary identity is still:
 
 ```text
 apple + sub
@@ -839,11 +839,11 @@ apple + sub
 
 ---
 
-## 21. Keycloak / OIDC empresarial
+## 21. Keycloak / enterprise OIDC
 
-Keycloak se usa normalmente en empresas.
+Keycloak is normally used in enterprises.
 
-Ejemplo config:
+Example config:
 
 ```env
 FEDERATED_AUTH_KEYCLOAK_ENABLED=true
@@ -854,7 +854,7 @@ KEYCLOAK_CLIENT_SECRET=secret
 KEYCLOAK_REDIRECT_URI=https://api.example.com/api/auth/federated/keycloak/callback
 ```
 
-Recomendado:
+Recommended:
 
 ```php
 'keycloak' => [
@@ -866,81 +866,81 @@ Recomendado:
 ]
 ```
 
-Para Keycloak, normalmente no quieres crear usuarios privilegiados automaticamente. Quieres que primero existan localmente o pasen por una validacion interna.
+For Keycloak, you usually do not want to create privileged users automatically. You want them to exist locally first or go through an internal validation.
 
 ---
 
-## 22. Seguridad explicada para juniors
+## 22. Security explained for juniors
 
-### 22.1. Por que no confiar en email
+### 22.1. Why not to trust email
 
-Malo:
+Bad:
 
 ```php
 $user = User::where('email', $providerEmail)->first();
 ```
 
-Problemas:
+Problems:
 
-- el email puede cambiar;
-- el email puede no estar verificado;
-- varios tipos de usuario pueden compartir email;
-- Apple puede usar relay email;
-- Facebook puede no entregar email;
-- puede existir riesgo de account takeover si se vincula automaticamente.
+- the email can change;
+- the email may not be verified;
+- several user types may share an email;
+- Apple may use a relay email;
+- Facebook may not provide an email;
+- there may be an account takeover risk if linking happens automatically.
 
-Bueno:
+Good:
 
 ```text
-Buscar por provider + provider_user_id.
+Look up by provider + provider_user_id.
 ```
 
-### 22.2. Que es `state`
+### 22.2. What `state` is
 
-`state` evita que alguien invente un callback falso.
+`state` prevents someone from forging a fake callback.
 
-Flujo:
+Flow:
 
 ```text
-Laravel crea state ABC
-Proveedor devuelve state ABC
-Laravel consume ABC una sola vez
+Laravel creates state ABC
+Provider returns state ABC
+Laravel consumes ABC only once
 ```
 
-Si alguien intenta reutilizarlo:
+If someone tries to reuse it:
 
 ```text
-rechazado
+rejected
 ```
 
-### 22.3. Que es `nonce`
+### 22.3. What `nonce` is
 
-`nonce` protege el `id_token` en flujos OIDC.
+`nonce` protects the `id_token` in OIDC flows.
 
-Flujo:
+Flow:
 
 ```text
-Laravel crea nonce N1
-Proveedor mete N1 dentro del id_token
-Laravel valida que el id_token contiene N1
+Laravel creates nonce N1
+Provider embeds N1 inside the id_token
+Laravel validates that the id_token contains N1
 ```
 
-### 22.4. Que es PKCE
+### 22.4. What PKCE is
 
-PKCE evita que un authorization code robado pueda intercambiarse sin el `code_verifier` correcto.
+PKCE prevents a stolen authorization code from being exchanged without the correct `code_verifier`.
 
-Flujo:
+Flow:
 
 ```text
-Laravel crea code_verifier secreto
-Laravel envia code_challenge publico
-Proveedor devuelve code
-Laravel intercambia code + code_verifier
+Laravel creates a secret code_verifier
+Laravel sends a public code_challenge
+Provider returns a code
+Laravel exchanges code + code_verifier
 ```
 
 ---
 
-## 23. Configuracion segura recomendada
+## 23. Recommended secure configuration
 
 ```env
 FEDERATED_AUTH_ENABLED=true
@@ -957,7 +957,7 @@ FEDERATED_AUTH_STORE_PROVIDER_TOKENS=false
 FEDERATED_AUTH_ENCRYPT_PROVIDER_TOKENS=true
 ```
 
-Para desarrollo local:
+For local development:
 
 ```env
 FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS=localhost,127.0.0.1
@@ -966,103 +966,103 @@ FEDERATED_AUTH_ALLOW_HTTP_LOCALHOST_REDIRECTS=true
 
 ---
 
-## 24. Ejemplo completo de flujo de primera vez
+## 24. Complete first-time flow example
 
-Usuario nuevo entra con Google.
+A new user signs in with Google.
 
 ```text
-1. Frontend abre /google/redirect
-2. Laravel crea state
-3. Google autentica
-4. Google vuelve al callback
-5. Laravel valida state
-6. Laravel obtiene ExternalIdentity
-7. Busca federated_auth_identities por google + provider_user_id
-8. No existe
-9. Como auto_provision=true, llama ClientUserProvisioner
-10. Crea users
-11. Crea clients
-12. Asigna rol Client
-13. Crea federated_auth_identities
-14. Emite JWT local
-15. Devuelve respuesta al frontend
+1. Frontend opens /google/redirect
+2. Laravel creates state
+3. Google authenticates
+4. Google returns to the callback
+5. Laravel validates the state
+6. Laravel obtains the ExternalIdentity
+7. Looks up federated_auth_identities by google + provider_user_id
+8. It does not exist
+9. Since auto_provision=true, it calls ClientUserProvisioner
+10. Creates users
+11. Creates clients
+12. Assigns the Client role
+13. Creates federated_auth_identities
+14. Issues a local JWT
+15. Returns the response to the frontend
 ```
 
 ---
 
-## 25. Ejemplo completo de usuario existente
+## 25. Complete existing-user flow example
 
 ```text
-1. Usuario entra con Apple
-2. Laravel valida id_token
-3. Extrae sub
-4. Busca apple + sub en federated_auth_identities
-5. Encuentra user_id=25
-6. Carga usuario local 25
-7. Verifica status activo
-8. Actualiza last_login_at
-9. Emite JWT local
+1. The user signs in with Apple
+2. Laravel validates the id_token
+3. Extracts the sub
+4. Looks up apple + sub in federated_auth_identities
+5. Finds user_id=25
+6. Loads local user 25
+7. Verifies active status
+8. Updates last_login_at
+9. Issues a local JWT
 ```
 
-No crea usuario nuevo.
+It does not create a new user.
 
 ---
 
-## 26. Ejemplo completo de usuario bloqueado
+## 26. Complete blocked-user flow example
 
 ```text
-1. Usuario autentica bien en Google
-2. Google confirma identidad
-3. Laravel encuentra usuario local
-4. Usuario local tiene status_id=0
-5. Laravel rechaza login
+1. The user authenticates successfully with Google
+2. Google confirms the identity
+3. Laravel finds the local user
+4. The local user has status_id=0
+5. Laravel rejects the login
 ```
 
-Importante:
+Important:
 
 ```text
-Que Google diga que eres tu no significa que tu sistema local deba darte acceso.
+Google saying you are you does not mean your local system must grant you access.
 ```
 
 ---
 
-## 27. Ejemplo de error por email duplicado
+## 27. Duplicate-email error example
 
-Supongamos:
+Assume:
 
 | id | email | user_type |
 |---:|---|---|
 | 1 | carlos@example.com | Client |
 | 2 | carlos@example.com | Veterinarian |
 
-Si permites vincular por email sin `user_type`, el sistema no sabe a cual usuario vincular.
+If you allow linking by email without `user_type`, the system does not know which user to link.
 
-Por seguridad, debe rechazar:
+For safety, it must reject:
 
 ```text
 AmbiguousLocalUserException
 ```
 
-Soluciones:
+Solutions:
 
-- pedir `user_type`;
-- no permitir `allow_email_linking`;
-- hacer vinculacion manual desde cuenta autenticada;
-- usar un flujo de verificacion interna.
+- require `user_type`;
+- do not allow `allow_email_linking`;
+- do manual linking from an authenticated account;
+- use an internal verification flow.
 
 ---
 
-## 28. Errores comunes y soluciones
+## 28. Common errors and solutions
 
 ### Error: provider disabled
 
-Causa:
+Cause:
 
 ```php
 'enabled' => false
 ```
 
-Solucion:
+Solution:
 
 ```env
 FEDERATED_AUTH_GOOGLE_ENABLED=true
@@ -1070,68 +1070,68 @@ FEDERATED_AUTH_GOOGLE_ENABLED=true
 
 ### Error: email required
 
-Causa:
+Cause:
 
 ```php
 'require_email' => true
 ```
 
-pero el proveedor no devolvio email.
+but the provider did not return an email.
 
-Solucion:
+Solution:
 
-- revisar scopes;
-- revisar permisos de la app;
-- en Facebook, verificar permiso `email`;
-- decidir si tu negocio permite login sin email.
+- check the scopes;
+- check the app permissions;
+- on Facebook, verify the `email` permission;
+- decide whether your business allows login without an email.
 
 ### Error: email not verified
 
-Causa:
+Cause:
 
 ```php
 'require_verified_email' => true
 ```
 
-pero el proveedor no confirmo verificacion.
+but the provider did not confirm verification.
 
-Solucion:
+Solution:
 
-- mantenerlo asi para Google/Apple;
-- en Facebook, usar `require_verified_email=false` y tratar email como contacto.
+- keep it that way for Google/Apple;
+- on Facebook, use `require_verified_email=false` and treat the email as a contact.
 
 ### Error: state missing
 
-Causa:
+Cause:
 
-- callback incorrecto;
-- provider no devolvio `state`;
-- frontend llamo callback manualmente;
-- cache se limpio;
-- TTL expiro.
+- incorrect callback;
+- the provider did not return a `state`;
+- the frontend called the callback manually;
+- the cache was cleared;
+- the TTL expired.
 
-Solucion:
+Solution:
 
-- revisar redirect URI configurado;
-- revisar cache driver;
-- revisar que no se pierda la sesion de redirect;
-- incrementar TTL si el login tarda demasiado.
+- check the configured redirect URI;
+- check the cache driver;
+- make sure the redirect session is not lost;
+- increase the TTL if login takes too long.
 
 ### Error: redirect host not allowed
 
-Causa:
+Cause:
 
 ```env
 FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS=api.example.com
 ```
 
-y estas usando:
+and you are using:
 
 ```text
 https://staging-api.example.com
 ```
 
-Solucion:
+Solution:
 
 ```env
 FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS=api.example.com,staging-api.example.com
@@ -1139,32 +1139,32 @@ FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS=api.example.com,staging-api.example.com
 
 ---
 
-## 29. Checklist antes de produccion
+## 29. Pre-production checklist
 
-- [ ] Google configurado con redirect URI real.
-- [ ] Facebook configurado y permiso email revisado.
-- [ ] Apple Services ID configurado.
-- [ ] Apple `.p8` guardado fuera del repo.
-- [ ] `FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS` configurado.
+- [ ] Google configured with a real redirect URI.
+- [ ] Facebook configured and email permission reviewed.
+- [ ] Apple Services ID configured.
+- [ ] Apple `.p8` stored outside the repo.
+- [ ] `FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS` configured.
 - [ ] `FEDERATED_AUTH_OAUTH_STATE_ENABLED=true`.
 - [ ] `FEDERATED_AUTH_PKCE_ENABLED=true`.
 - [ ] `FEDERATED_AUTH_OIDC_NONCE_ENABLED=true`.
-- [ ] `store_provider_tokens=false` salvo necesidad real.
-- [ ] Admin no se auto-provisiona.
-- [ ] Veterinarian no se auto-provisiona.
-- [ ] Technician no se auto-provisiona.
-- [ ] Client tiene provisioner propio.
-- [ ] RoleMapper probado.
-- [ ] TokenIssuer probado.
-- [ ] Tests pasan.
-- [ ] Logs no imprimen provider tokens.
-- [ ] Respuesta API no expone password ni columnas internas.
+- [ ] `store_provider_tokens=false` unless there is a real need.
+- [ ] Admin is not auto-provisioned.
+- [ ] Veterinarian is not auto-provisioned.
+- [ ] Technician is not auto-provisioned.
+- [ ] Client has its own provisioner.
+- [ ] RoleMapper tested.
+- [ ] TokenIssuer tested.
+- [ ] Tests pass.
+- [ ] Logs do not print provider tokens.
+- [ ] The API response does not expose password or internal columns.
 
 ---
 
-## 30. Arquitectura mental final
+## 30. Final mental architecture
 
-Recuerda este dibujo:
+Remember this diagram:
 
 ```text
 [Google/Facebook/Apple/Keycloak]
@@ -1183,14 +1183,14 @@ Recuerda este dibujo:
 Resolver  Provisioner  LinkRepo  RoleMap  TokenIssuer
     |         |         |         |         |
     v         v         v         v         v
- Usuario   Crear      Vinculo    Roles    JWT/Sanctum
- local     usuario    externo    permisos sesion
+ Local     Create      External   Roles    JWT/Sanctum
+ user      user        link       perms    session
 ```
 
-La frase mas importante:
+The most important sentence:
 
 ```text
-La identidad externa autentica. Tu sistema local autoriza.
+The external identity authenticates. Your local system authorizes.
 ```
 
-Si entiendes eso, puedes usar esta biblioteca de forma segura y profesional.
+If you understand that, you can use this library in a safe and professional way.
