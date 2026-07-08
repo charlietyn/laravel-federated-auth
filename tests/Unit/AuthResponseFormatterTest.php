@@ -65,6 +65,11 @@ final class FakeAuthenticatableUser implements Authenticatable
         return $this->attributes[$key] ?? null;
     }
 
+    public function __isset(string $key): bool
+    {
+        return array_key_exists($key, $this->attributes);
+    }
+
     public function getAuthIdentifierName(): string
     {
         return 'id';
@@ -90,7 +95,7 @@ final class FakeAuthenticatableUser implements Authenticatable
         return null;
     }
 
-    public function setRememberToken($value) {}
+    public function setRememberToken($value): void {}
 
     public function getRememberTokenName(): string
     {
