@@ -1,52 +1,102 @@
 # 16 - Running tests locally
 
-## Install dependencies
+## Recommended commands
+
+Run these commands from the repository root.
 
 ```bash
 composer install
+composer qa
 ```
 
-## Linux, macOS or Git Bash
+`composer qa` runs the full local quality check:
 
-```bash
-./vendor/bin/phpunit
-./vendor/bin/pint --test
+```text
+composer pint:test
+composer test
+```
+
+## Available Composer scripts
+
+| Command | Purpose |
+|---|---|
+| `composer test` | Run PHPUnit. |
+| `composer test:unit` | Run the `Unit` PHPUnit testsuite. |
+| `composer pint` | Format the project with Laravel Pint. |
+| `composer pint:test` | Check formatting without changing files. |
+| `composer format` | Alias for `composer pint`. |
+| `composer qa` | Run `composer pint:test` and `composer test`. |
+
+## Windows CMD
+
+If your prompt looks like this:
+
+```bat
+D:\Proyectos\Composer Libraries\ronu-laravel-federated-auth>
+```
+
+then you are using Windows CMD.
+
+Do not use `./vendor/bin/...` in CMD. Use the Composer scripts instead:
+
+```bat
+composer install
+composer pint:test
+composer test
+```
+
+Or run everything together:
+
+```bat
+composer qa
 ```
 
 ## Windows PowerShell
 
+Composer scripts work the same way:
+
 ```powershell
-.\vendor\bin\phpunit.bat
-.\vendor\bin\pint.bat --test
+composer install
+composer qa
 ```
 
-## Windows CMD
+Direct vendor commands also work in PowerShell, but Composer scripts are easier:
 
-```bat
-vendor\bin\phpunit.bat
-vendor\bin\pint.bat --test
+```powershell
+.\vendor\bin\pint.bat --test
+.\vendor\bin\phpunit.bat
+```
+
+## Linux, macOS or Git Bash
+
+Composer scripts work everywhere:
+
+```bash
+composer install
+composer qa
+```
+
+Direct vendor commands also work:
+
+```bash
+./vendor/bin/pint --test
+./vendor/bin/phpunit
 ```
 
 ## When Pint fails
 
-`pint --test` only checks formatting. It does not modify files.
+`composer pint:test` only checks formatting. It does not modify files.
 
 To automatically format the project, run:
 
 ```bash
-./vendor/bin/pint
-```
-
-On Windows PowerShell:
-
-```powershell
-.\vendor\bin\pint.bat
+composer pint
 ```
 
 Then rerun:
 
 ```bash
-./vendor/bin/pint --test
+composer pint:test
 ```
 
 ## When PHPUnit cannot find tests
@@ -54,11 +104,5 @@ Then rerun:
 The package includes `phpunit.xml.dist`. Run PHPUnit from the repository root:
 
 ```bash
-./vendor/bin/phpunit
-```
-
-If you are using Windows PowerShell, prefer:
-
-```powershell
-.\vendor\bin\phpunit.bat
+composer test
 ```
