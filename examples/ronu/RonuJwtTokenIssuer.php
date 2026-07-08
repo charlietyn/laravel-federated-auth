@@ -15,6 +15,6 @@ class RonuJwtTokenIssuer implements TokenIssuerInterface
         $guard = $context->guard ?: 'api';
         $token = auth($guard)->login($user);
 
-        return new AuthResult($user, ['token' => $token, 'access_token' => $token, 'token_type' => 'bearer', 'expires_in' => auth($guard)->factory()->getTTL(), 'refresh_token' => app(JWTAuth::class)->claims(['refresh' => true])->fromUser($user), 'refresh_expires_in' => (int) config('jwt.refresh_ttl')]);
+        return new AuthResult($user, ['token' => $token, 'access_token' => $token, 'token_type' => 'bearer', 'expires_in' => auth($guard)->factory()->getTTL(), 'refresh_token' => app(JWTAuth::class)->claims(['refresh' => true])->fromUser($user), 'refresh_expires_in' => (int)config('jwt.refresh_ttl')]);
     }
 }
