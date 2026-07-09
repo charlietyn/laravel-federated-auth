@@ -19,7 +19,7 @@ return new class extends Migration
 
             $table->bigIncrements('id')
                 ->comment('Internal auto-incrementing surrogate primary key. Used only for storage/ordering; never exposed to clients.');
-            $table->uuid('uuid')->unique()
+            $table->uuid('uuid')
                 ->comment('Stable, publicly shareable identifier for this identity link. Safe to expose in APIs and logs without leaking the sequential primary key.');
             $table->string('tenant_id')->nullable()->index()
                 ->comment('Tenant/organization scope that owns this identity link. Nullable for single-tenant deployments; part of the composite uniqueness keys so the same provider account can exist independently per tenant.');
@@ -50,6 +50,10 @@ return new class extends Migration
             $table->timestamp('last_login_at')->nullable()
                 ->comment('Timestamp of the most recent successful authentication through this identity link. Updated on every login/touch for auditing and inactivity analysis.');
             $table->timestamps();
+            // Explicitly named unique so up()/down() and host-side drops behave identically across MySQL and PostgreSQL.
+            // On PostgreSQL a UNIQUE is a constraint backed by an index; drop it with dropUnique('fed_auth_uuid_unique'),
+            // never dropIndex(), or Postgres raises "cannot drop index ... because constraint ... requires it" (SQLSTATE 2BP01).
+            $table->unique(['uuid'], 'fed_auth_uuid_unique');
             $table->unique(['tenant_id', 'provider', 'provider_user_id'], 'fed_auth_tenant_provider_uid_unique');
             $table->unique(['tenant_id', 'user_id', 'provider'], 'fed_auth_tenant_user_provider_unique');
         });
