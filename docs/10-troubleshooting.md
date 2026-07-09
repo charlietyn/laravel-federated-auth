@@ -24,7 +24,13 @@ Fix: bind a custom `TokenIssuerInterface`.
 
 ## Identity table missing
 
-Run:
+Run the isolated package migration:
+
+```bash
+php artisan federated-auth:migrate
+```
+
+Or publish it and migrate with the rest of your app:
 
 ```bash
 php artisan vendor:publish --tag=federated-auth-migrations

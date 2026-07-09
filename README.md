@@ -97,6 +97,20 @@ No linked identity exists. After the security validations, the broker optionally
 composer require ronu/laravel-federated-auth
 
 php artisan vendor:publish --tag=federated-auth-config
+
+# Run ONLY this package's migration, isolated from your app's migrations:
+php artisan federated-auth:migrate
+```
+
+`federated-auth:migrate` runs the package's identity-store migration from
+inside the package (via `--path`) without triggering any pending host-app
+migrations. Supported flags: `--rollback`, `--refresh`, `--status`,
+`--database=`, `--force`, `--pretend`.
+
+Prefer to manage the schema yourself? Publish the migration into your app and
+run the standard `migrate` instead:
+
+```bash
 php artisan vendor:publish --tag=federated-auth-migrations
 php artisan migrate
 ```
