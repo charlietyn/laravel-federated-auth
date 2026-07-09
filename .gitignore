@@ -5,3 +5,6 @@
 /.pest.result
 /.phpstan.cache/
 /.idea
+.claude
+.codex
+/**/graphify-out/
