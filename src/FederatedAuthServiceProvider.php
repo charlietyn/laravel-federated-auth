@@ -3,6 +3,7 @@
 namespace Ronu\LaravelFederatedAuth;
 
 use Illuminate\Support\ServiceProvider;
+use Ronu\LaravelFederatedAuth\Console\MigrateCommand;
 use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
@@ -58,6 +59,12 @@ class FederatedAuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                MigrateCommand::class,
+            ]);
+        }
+
         $this->publishes([
             __DIR__.'/../config/federated-auth.php' => config_path('federated-auth.php'),
         ], 'federated-auth-config');

@@ -182,8 +182,7 @@ In this example, local user `25` can sign in with either Google or Apple.
 ```bash
 composer require ronu/laravel-federated-auth
 php artisan vendor:publish --tag=federated-auth-config
-php artisan vendor:publish --tag=federated-auth-migrations
-php artisan migrate
+php artisan federated-auth:migrate
 ```
 
 After publishing the configuration, review:

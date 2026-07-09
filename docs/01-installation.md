@@ -25,21 +25,37 @@ Line by line:
 - `vendor:publish` copies package files into the host app.
 - `--tag=federated-auth-config` publishes only `config/federated-auth.php`.
 
-## Step 3 - Publish migration
+## Step 3 - Run the package migration
+
+The recommended path runs **only** this package's migration, in isolation from
+your application's own pending migrations:
+
+```bash
+php artisan federated-auth:migrate
+```
+
+This targets the migration shipped inside the package (via `--path`), so your
+host-app migrations are left untouched. Useful flags:
+
+| Flag | Effect |
+|---|---|
+| `--rollback` | Roll back the package migration |
+| `--refresh` | Roll back and re-run the package migration |
+| `--status` | Show the package migration status |
+| `--database=` | Override the connection (defaults to `identity_store.connection`) |
+| `--force` | Run in production without confirmation |
+| `--pretend` | Print the SQL instead of executing it |
+
+Prefer to own the schema yourself (for example to use a custom schema such as
+`security.social_accounts`)? Publish the migration into your app and run the
+standard migrate command instead:
 
 ```bash
 php artisan vendor:publish --tag=federated-auth-migrations
-```
-
-This publishes the identity-link table migration. You can use it directly, or create a custom migration if your application uses schemas such as `security.social_accounts`.
-
-## Step 4 - Run migration
-
-```bash
 php artisan migrate
 ```
 
-## Step 5 - Configure provider credentials
+## Step 4 - Configure provider credentials
 
 Example for Google:
 
@@ -51,7 +67,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_REDIRECT_URI=https://api.example.com/api/auth/federated/google/callback
 ```
 
-## Step 6 - Configure local user behavior
+## Step 5 - Configure local user behavior
 
 For a standard Laravel app, set:
 
