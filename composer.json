@@ -2,7 +2,7 @@
   "name": "ronu/laravel-federated-auth",
   "description": "Configurable Laravel federated authentication bridge for social providers, OAuth2/OIDC providers and enterprise identity systems such as Keycloak.",
   "type": "library",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "license": "MIT",
   "keywords": [
     "laravel",
@@ -26,7 +26,9 @@
     "firebase/php-jwt": "^6.10"
   },
   "suggest": {
-    "ronu/rest-generic-class": "Optional integration for REST-style response formatting and effective permission payloads."
+    "ronu/rest-generic-class": "Optional integration for REST-style response formatting and effective permission payloads.",
+    "ronu/laravel-app-context": "Bind TokenIssuerInterface to Integrations\\AppContext\\AppContextTokenIssuer to emit channel-bound JWTs (aud/tid/did) accepted by app-context middleware.",
+    "php-open-source-saver/jwt-auth": "Required by the JwtAuthTokenIssuer and by the app-context integration."
   },
   "require-dev": {
     "orchestra/testbench": "^9.0|^10.0",
