@@ -30,6 +30,7 @@
 /.phpunit.coverage.cache
 
 # IDEs and editors
+/.idea
 /.idea/
 /.vscode/
 /.fleet/
@@ -40,7 +41,6 @@
 *~
 *.swp
 *.swo
-
 # Local AI tooling and generated code graphs
 /.claude/
 /.codex/

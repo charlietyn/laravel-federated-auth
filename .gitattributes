@@ -13,3 +13,26 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+
+# Development-only content excluded from release archives
+/.claude export-ignore
+/.claudeignore export-ignore
+/.codex export-ignore
+/.codexignore export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/.idea export-ignore
+/.phpunit.cache export-ignore
+/CLAUDE.md export-ignore
+/build export-ignore
+/composer.lock export-ignore
+/coverage export-ignore
+/docs export-ignore
+/examples export-ignore
+/graphify-out export-ignore
+/phpunit.xml.dist export-ignore
+/pint.json export-ignore
+/tests export-ignore
+/tmp export-ignore
+/vendor export-ignore
