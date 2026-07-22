@@ -1,10 +1,58 @@
+# Composer
 /vendor/
+/node_modules/
 /composer.lock
+/composer.phar
+/auth.json
+
+# Local environment and secrets
+/.env
+/.env.*
+!/.env.example
+!/.env.testing.example
+
+# Test, analysis and code-quality caches
 /.phpunit.cache/
 /.phpunit.result.cache
 /.pest.result
 /.phpstan.cache/
-/.idea
-.claude
-.codex
+/.php-cs-fixer.cache
+/.psalm/cache/
+/.infection.log
+/.cache/
+/.tmp/
+/tmp/
+
+# Coverage and generated build artifacts
+/coverage/
+/build/
+/dist/
+/.phpunit.coverage.cache
+
+# IDEs and editors
+/.idea/
+/.vscode/
+/.fleet/
+/.zed/
+/*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*~
+*.swp
+*.swo
+
+# Local AI tooling and generated code graphs
+/.claude/
+/.codex/
 /**/graphify-out/
+
+# Logs and temporary files
+/*.log
+/*.tmp
+/*.temp
+
+# Operating-system metadata
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
