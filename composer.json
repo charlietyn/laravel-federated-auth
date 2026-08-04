@@ -20,9 +20,9 @@
     "illuminate/http": "^11.0|^12.0",
     "illuminate/routing": "^11.0|^12.0",
     "illuminate/database": "^11.0|^12.0",
-    "laravel/socialite": "^5.15",
+    "laravel/socialite": "^5.24.1",
     "guzzlehttp/guzzle": "^7.8",
-    "firebase/php-jwt": "^6.10"
+    "firebase/php-jwt": "^7.0"
   },
   "suggest": {
     "ronu/rest-generic-class": "Optional integration for REST-style response formatting and effective permission payloads.",
