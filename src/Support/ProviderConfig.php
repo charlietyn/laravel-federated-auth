@@ -2,12 +2,18 @@
 
 namespace Ronu\LaravelFederatedAuth\Support;
 
+use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\Exceptions\ProviderDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\ProviderNotSupportedException;
 
 final class ProviderConfig
 {
-    public static function get(string $provider): array
+    /**
+     * Resolve provider configuration and, when configured, overlay the OAuth
+     * client that belongs to the trusted application channel restored from
+     * server-side state.
+     */
+    public static function get(string $provider, ?AuthContext $context = null): array
     {
         $config = config("federated-auth.providers.$provider");
 
@@ -19,12 +25,44 @@ final class ProviderConfig
             throw new ProviderDisabledException("Provider [$provider] is disabled.");
         }
 
+        $clients = $config['clients'] ?? [];
+        $channel = $context?->channel;
+
+        if (is_array($clients) && $clients !== []) {
+            if (! is_string($channel) || $channel === '') {
+                throw new ProviderDisabledException(
+                    "Provider [$provider] requires a trusted application channel."
+                );
+            }
+
+            $client = $clients[$channel] ?? null;
+
+            if (! is_array($client) || ! ($client['enabled'] ?? true)) {
+                throw new ProviderDisabledException(
+                    "No enabled OAuth client is configured for provider [$provider] and channel [$channel]."
+                );
+            }
+
+            $config = array_replace($config, $client);
+            $config['resolved_channel'] = $channel;
+        }
+
+        if (($config['require_client_id'] ?? true) && blank($config['client_id'] ?? null)) {
+            throw new ProviderDisabledException(
+                "Provider [$provider] does not have a client_id for the resolved channel."
+            );
+        }
+
         return $config;
     }
 
-    public static function value(string $provider, string $key, mixed $default = null): mixed
-    {
-        $config = self::get($provider);
+    public static function value(
+        string $provider,
+        string $key,
+        mixed $default = null,
+        ?AuthContext $context = null,
+    ): mixed {
+        $config = self::get($provider, $context);
 
         return $config[$key] ?? $default;
     }
