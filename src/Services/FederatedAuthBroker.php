@@ -222,8 +222,12 @@ class FederatedAuthBroker
 
         $allowedUserTypes = $cfg['email_linking_allowed_user_types'] ?? [];
 
-        if (! is_array($allowedUserTypes) || $allowedUserTypes === []) {
+        if ($allowedUserTypes === []) {
             return true;
+        }
+
+        if (! is_array($allowedUserTypes)) {
+            return false;
         }
 
         return $context->userType !== null
