@@ -11,8 +11,7 @@ use Ronu\LaravelFederatedAuth\Exceptions\InvalidProviderTokenException;
 /**
  * Google Socialite provider adapted for package-managed, server-side OAuth
  * state. The code verifier is restored from the one-time state instead of a
- * Laravel session, and the callback ID token is verified before user data is
- * accepted.
+ * Laravel session, and every accepted ID token is cryptographically verified.
  */
 class PkceGoogleProvider extends GoogleProvider
 {
@@ -28,8 +27,8 @@ class PkceGoogleProvider extends GoogleProvider
     }
 
     /**
-     * Complete the authorization-code exchange and require a signed Google ID
-     * token whose audience is this channel's configured client ID.
+     * Complete the browser authorization-code exchange and require a signed
+     * Google ID token whose audience is this channel's configured client ID.
      */
     public function userWithVerifiedIdToken(?string $expectedNonce = null): User
     {
@@ -53,25 +52,7 @@ class PkceGoogleProvider extends GoogleProvider
             throw new InvalidProviderTokenException('Google did not return an access token.');
         }
 
-        try {
-            // GoogleProvider verifies the signature, issuer, audience and JWT
-            // temporal claims through firebase/php-jwt and Google's JWKS.
-            $claims = $this->getUserFromJwtToken($idToken);
-        } catch (\Throwable $exception) {
-            throw new InvalidProviderTokenException(
-                'Google ID token verification failed.',
-                previous: $exception,
-            );
-        }
-
-        if ($expectedNonce !== null && $expectedNonce !== '') {
-            $actualNonce = (string) ($claims['nonce'] ?? '');
-
-            if ($actualNonce === '' || ! hash_equals($expectedNonce, $actualNonce)) {
-                throw new InvalidProviderTokenException('Google ID token nonce mismatch.');
-            }
-        }
-
+        $claims = $this->verifiedClaims($idToken, $expectedNonce);
         $profile = $this->getUserByToken($accessToken);
         $claimSubject = (string) ($claims['sub'] ?? '');
         $profileSubject = (string) ($profile['sub'] ?? '');
@@ -80,10 +61,28 @@ class PkceGoogleProvider extends GoogleProvider
             throw new InvalidProviderTokenException('Google identity subject mismatch.');
         }
 
-        $this->verifiedIdTokenClaims = $claims;
         $user = array_replace($profile, $claims);
 
         return $this->userInstance($response, $user);
+    }
+
+    /**
+     * Native/mobile flow. The supplied value is an ID token, not an access
+     * token, so it is verified locally against Google's JWKS and mapped directly
+     * from claims. No userinfo request is attempted with the wrong token type.
+     */
+    public function userFromVerifiedIdToken(
+        string $idToken,
+        ?string $expectedNonce = null,
+    ): User {
+        $claims = $this->verifiedClaims($idToken, $expectedNonce);
+        $subject = (string) ($claims['sub'] ?? '');
+
+        if ($subject === '') {
+            throw new InvalidProviderTokenException('Google ID token is missing its subject.');
+        }
+
+        return $this->mapUserToObject($claims);
     }
 
     public function verifiedIdTokenClaims(): array
@@ -100,5 +99,33 @@ class PkceGoogleProvider extends GoogleProvider
         }
 
         return $fields;
+    }
+
+    private function verifiedClaims(
+        string $idToken,
+        ?string $expectedNonce,
+    ): array {
+        try {
+            // GoogleProvider verifies the signature, issuer, configured client
+            // audience and JWT temporal claims through firebase/php-jwt/JWKS.
+            $claims = $this->getUserFromJwtToken($idToken);
+        } catch (\Throwable $exception) {
+            throw new InvalidProviderTokenException(
+                'Google ID token verification failed.',
+                previous: $exception,
+            );
+        }
+
+        if ($expectedNonce !== null && $expectedNonce !== '') {
+            $actualNonce = (string) ($claims['nonce'] ?? '');
+
+            if ($actualNonce === '' || ! hash_equals($expectedNonce, $actualNonce)) {
+                throw new InvalidProviderTokenException('Google ID token nonce mismatch.');
+            }
+        }
+
+        $this->verifiedIdTokenClaims = $claims;
+
+        return $claims;
     }
 }
