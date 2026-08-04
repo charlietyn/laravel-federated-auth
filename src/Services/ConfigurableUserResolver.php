@@ -23,7 +23,7 @@ class ConfigurableUserResolver implements UserResolverInterface
             ->where(config('federated-auth.user.primary_key', 'id'), $userId);
         $typeColumn = config('federated-auth.user.columns.type');
 
-        if ($typeColumn && $context->userType) {
+        if ($typeColumn && $context->userType && $this->mustMatchUserType($context)) {
             $query->where($typeColumn, $context->userType);
         }
 
@@ -51,7 +51,7 @@ class ConfigurableUserResolver implements UserResolverInterface
             ->where(config('federated-auth.user.columns.email', 'email'), $identity->email);
         $typeColumn = config('federated-auth.user.columns.type');
 
-        if ($typeColumn && $context->userType) {
+        if ($typeColumn && $context->userType && $this->mustMatchUserType($context)) {
             $query->where($typeColumn, $context->userType);
         }
 
@@ -62,5 +62,22 @@ class ConfigurableUserResolver implements UserResolverInterface
         }
 
         return $users->first();
+    }
+
+    /**
+     * Cross-type resolution is permitted only when the host application opts in
+     * globally and a server-created OAuth state restores the explicit marker.
+     * AuthContext::fromRequest never accepts arbitrary metadata from the client,
+     * so query/body/header manipulation cannot activate this path.
+     */
+    private function mustMatchUserType(AuthContext $context): bool
+    {
+        $enabled = (bool) config(
+            'federated-auth.security.allow_trusted_cross_user_type_resolution',
+            false,
+        );
+        $trustedRegistration = ($context->metadata['trusted_multi_role_registration'] ?? false) === true;
+
+        return ! ($enabled && $trustedRegistration);
     }
 }
