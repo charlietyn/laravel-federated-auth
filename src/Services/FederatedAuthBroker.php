@@ -4,6 +4,7 @@ namespace Ronu\LaravelFederatedAuth\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Event;
+use Ronu\LaravelFederatedAuth\Contracts\AuthenticationTransactionInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
@@ -39,12 +40,13 @@ class FederatedAuthBroker
         private readonly UserStatusCheckerInterface $statusChecker,
         private readonly RoleMapperInterface $roleMapper,
         private readonly OAuthStateStoreInterface $states,
+        private readonly ?AuthenticationTransactionInterface $transactions = null,
     ) {}
 
     public function redirectUrl(string $provider, AuthContext $context): string
     {
         $this->ensurePackageEnabled();
-        ProviderConfig::get($provider);
+        ProviderConfig::get($provider, $context);
 
         return $this->providers->adapterFor($provider)->redirectUrl($context);
     }
@@ -62,6 +64,7 @@ class FederatedAuthBroker
     public function loginFromToken(string $provider, string $token, AuthContext $context): AuthResult
     {
         $this->ensurePackageEnabled();
+        ProviderConfig::get($provider, $context);
         $identity = $this->providers->adapterFor($provider)->userFromToken($token, $context);
 
         return $this->authenticateIdentity($identity, $context);
@@ -69,35 +72,39 @@ class FederatedAuthBroker
 
     public function linkIdentity(Authenticatable $user, ExternalIdentity $identity, AuthContext $context): AuthResult
     {
-        $this->ensurePackageEnabled();
-        $cfg = ProviderConfig::get($identity->provider);
-        $this->validateIdentity($identity, $cfg, $context);
-        $uid = $user->getAuthIdentifier();
-        $existing = $this->links->findByProviderIdentity($identity->provider, $identity->providerUserId, $context);
+        $operation = function () use ($user, $identity, $context): AuthResult {
+            $this->ensurePackageEnabled();
+            $cfg = ProviderConfig::get($identity->provider, $context);
+            $this->validateIdentity($identity, $cfg, $context);
+            $uid = $user->getAuthIdentifier();
+            $existing = $this->links->findByProviderIdentity($identity->provider, $identity->providerUserId, $context);
 
-        if ($existing && (string) $existing->userId !== (string) $uid) {
-            throw new IdentityAlreadyLinkedException('This external identity is already linked to another local user.');
-        }
+            if ($existing && (string) $existing->userId !== (string) $uid) {
+                throw new IdentityAlreadyLinkedException('This external identity is already linked to another local user.');
+            }
 
-        $linked = $this->links->findByUserAndProvider($uid, $identity->provider, $context);
+            $linked = $this->links->findByUserAndProvider($uid, $identity->provider, $context);
 
-        if ($linked) {
-            $this->links->touch($linked, $identity, $context);
-        } else {
-            $this->links->create($uid, $identity, $context);
-            Event::dispatch(new ExternalAccountLinked($user, $identity, $context));
-        }
+            if ($linked) {
+                $this->links->touch($linked, $identity, $context);
+            } else {
+                $this->links->create($uid, $identity, $context);
+                Event::dispatch(new ExternalAccountLinked($user, $identity, $context));
+            }
 
-        $this->roleMapper->sync($user, $identity, $context);
-        $result = $this->tokens->issue($user, $context);
+            $this->roleMapper->sync($user, $identity, $context);
+            $result = $this->tokens->issue($user, $context);
 
-        return new AuthResult($user, $result->tokens, $identity, false, true, $result->metadata);
+            return new AuthResult($user, $result->tokens, $identity, false, true, $result->metadata);
+        };
+
+        return $this->runTransaction($operation);
     }
 
     public function unlink(Authenticatable $user, string $provider, AuthContext $context): void
     {
         $this->ensurePackageEnabled();
-        ProviderConfig::get($provider);
+        ProviderConfig::get($provider, $context);
         $uid = $user->getAuthIdentifier();
         $linked = $this->links->findByUserAndProvider($uid, $provider, $context);
 
@@ -120,7 +127,14 @@ class FederatedAuthBroker
 
     public function authenticateIdentity(ExternalIdentity $identity, AuthContext $context): AuthResult
     {
-        $cfg = ProviderConfig::get($identity->provider);
+        return $this->runTransaction(
+            fn (): AuthResult => $this->authenticateIdentityAtomically($identity, $context)
+        );
+    }
+
+    private function authenticateIdentityAtomically(ExternalIdentity $identity, AuthContext $context): AuthResult
+    {
+        $cfg = ProviderConfig::get($identity->provider, $context);
         $this->validateIdentity($identity, $cfg, $context);
         $linked = $this->links->findByProviderIdentity($identity->provider, $identity->providerUserId, $context);
 
@@ -209,11 +223,6 @@ class FederatedAuthBroker
         }
     }
 
-    /**
-     * Providers may opt into verified-email linking globally or restrict it to
-     * selected local user types. An empty type list preserves the package's
-     * previous all-types behavior for backwards compatibility.
-     */
     private function emailLinkingAllowed(array $cfg, AuthContext $context): bool
     {
         if (($cfg['allow_email_linking'] ?? false) !== true) {
@@ -234,11 +243,6 @@ class FederatedAuthBroker
             && in_array($context->userType, $allowedUserTypes, true);
     }
 
-    /**
-     * Admin identities may authenticate when they are already linked or match a
-     * verified local account. The security flag only blocks creating a new
-     * privileged local account from provider data.
-     */
     private function ensureCanAutoProvision(AuthContext $context): void
     {
         if (! config('federated-auth.security.prevent_admin_auto_provision', true)) {
@@ -264,6 +268,13 @@ class FederatedAuthBroker
         Event::dispatch(new ExternalLoginSucceeded($user, $identity, $context, $final));
 
         return $final;
+    }
+
+    private function runTransaction(callable $operation): mixed
+    {
+        return $this->transactions
+            ? $this->transactions->run($operation)
+            : $operation();
     }
 
     private function ensurePackageEnabled(): void
