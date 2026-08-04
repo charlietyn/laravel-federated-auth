@@ -2,10 +2,11 @@
 
 namespace Ronu\LaravelFederatedAuth\Tests\Unit;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
 use Ronu\LaravelFederatedAuth\Services\ConfigurableUserResolver;
@@ -139,7 +140,7 @@ final class ResolverUser extends Authenticatable
     }
 }
 
-final class ResolverRole extends \Illuminate\Database\Eloquent\Model
+final class ResolverRole extends Model
 {
     protected $table = 'resolver_roles';
 
