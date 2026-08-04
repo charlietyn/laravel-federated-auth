@@ -9,7 +9,6 @@ use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
 use Ronu\LaravelFederatedAuth\DTO\OAuthAuthorizationState;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidOAuthStateException;
-use Ronu\LaravelFederatedAuth\Exceptions\InvalidProviderTokenException;
 use Ronu\LaravelFederatedAuth\Support\ProviderConfig;
 
 abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterface
@@ -111,23 +110,25 @@ abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterf
 
     public function userFromToken(string $token, AuthContext $context): ExternalIdentity
     {
-        $driver = $this->driver($context->provider, $context, $context->authorizationState);
-        $user = $driver->userFromToken($token);
-        $identity = $this->normalize($context->provider, $user);
+        $driver = $this->driver(
+            $context->provider,
+            $context,
+            $context->authorizationState,
+        );
 
         if (
-            $context->provider === 'google'
+            $driver instanceof PkceGoogleProvider
             && $context->providerTokenType === 'id_token'
-            && $context->authorizationState?->nonce
         ) {
-            $actualNonce = (string) ($identity->claims['nonce'] ?? '');
-
-            if ($actualNonce === '' || ! hash_equals($context->authorizationState->nonce, $actualNonce)) {
-                throw new InvalidProviderTokenException('Google ID token nonce mismatch.');
-            }
+            $user = $driver->userFromVerifiedIdToken(
+                $token,
+                $context->authorizationState?->nonce,
+            );
+        } else {
+            $user = $driver->userFromToken($token);
         }
 
-        return $identity;
+        return $this->normalize($context->provider, $user);
     }
 
     protected function driver(
