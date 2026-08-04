@@ -155,6 +155,7 @@ class FederatedAuthBroker
                 throw new UserProvisioningNotConfiguredException('External identity is not linked and auto provisioning is disabled.');
             }
 
+            $this->ensureCanAutoProvision($context);
             $user = $this->provisioner->provision($identity, $context);
             $wasProvisioned = true;
             Event::dispatch(new ExternalUserProvisioned($user, $identity, $context));
@@ -206,13 +207,23 @@ class FederatedAuthBroker
         if ($requested && $allowed && ! in_array($requested, $allowed, true)) {
             throw new ProviderDisabledException("User type [$requested] is not allowed for provider [{$identity->provider}].");
         }
+    }
 
-        if (config('federated-auth.security.prevent_admin_auto_provision', true)) {
-            $admin = config('federated-auth.security.admin_user_types', []);
+    /**
+     * Admin identities may authenticate when they are already linked or match a
+     * verified local account. The security flag only blocks creating a new
+     * privileged local account from provider data.
+     */
+    private function ensureCanAutoProvision(AuthContext $context): void
+    {
+        if (! config('federated-auth.security.prevent_admin_auto_provision', true)) {
+            return;
+        }
 
-            if ($requested && in_array($requested, $admin, true)) {
-                throw new ProviderDisabledException('Admin users cannot be auto-provisioned through federated auth.');
-            }
+        $adminUserTypes = config('federated-auth.security.admin_user_types', []);
+
+        if ($context->userType && in_array($context->userType, $adminUserTypes, true)) {
+            throw new ProviderDisabledException('Admin users cannot be auto-provisioned through federated auth.');
         }
     }
 
