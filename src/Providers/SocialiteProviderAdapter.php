@@ -7,7 +7,9 @@ use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderAdapterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
+use Ronu\LaravelFederatedAuth\DTO\OAuthAuthorizationState;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidOAuthStateException;
+use Ronu\LaravelFederatedAuth\Exceptions\InvalidProviderTokenException;
 use Ronu\LaravelFederatedAuth\Support\ProviderConfig;
 
 abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterface
@@ -27,13 +29,9 @@ abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterf
 
     public function redirectUrl(AuthContext $context): string
     {
-        $config = ProviderConfig::get($context->provider);
-        $driver = $this->driver($context->provider);
+        $config = ProviderConfig::get($context->provider, $context);
         $with = [];
-
-        if (! empty($config['scopes'])) {
-            $driver->scopes($config['scopes']);
-        }
+        $state = null;
 
         if ($this->oauthStateEnabled()) {
             $state = $this->stateStore()->create($context->provider, $context);
@@ -43,10 +41,21 @@ abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterf
                 $with['nonce'] = $state->nonce;
             }
 
-            // Package-managed state is intentionally stateless from Socialite's perspective.
-            // The package validates and consumes the state itself on callback.
-            $driver->stateless();
-        } elseif (($config['stateless'] ?? true) === true) {
+            if ($state->codeChallenge) {
+                $with['code_challenge'] = $state->codeChallenge;
+                $with['code_challenge_method'] = $state->codeChallengeMethod ?: 'S256';
+            }
+        }
+
+        $driver = $this->driver($context->provider, $context, $state);
+
+        if (! empty($config['scopes'])) {
+            $driver->scopes($config['scopes']);
+        }
+
+        // The package owns state and PKCE server-side. Socialite must therefore
+        // remain stateless and must not create a second session-bound state.
+        if ($this->oauthStateEnabled() || ($config['stateless'] ?? true) === true) {
             $driver->stateless();
         }
 
@@ -59,41 +68,88 @@ abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterf
 
     public function userFromCallback(AuthContext $context): ExternalIdentity
     {
-        $config = ProviderConfig::get($context->provider);
-        $driver = $this->driver($context->provider);
+        $config = ProviderConfig::get($context->provider, $context);
 
-        if ($this->oauthStateEnabled()) {
-            if (! $context->authorizationState) {
-                $incomingState = $context->request?->query('state') ?? $context->request?->input('state');
+        if ($this->oauthStateEnabled() && ! $context->authorizationState) {
+            $incomingState = $context->request?->query('state') ?? $context->request?->input('state');
 
-                if (! is_string($incomingState) || $incomingState === '') {
-                    throw new InvalidOAuthStateException('OAuth callback did not include a state value.');
-                }
-
-                $this->stateStore()->consume($context->provider, $incomingState, $context->request ?: request());
+            if (! is_string($incomingState) || $incomingState === '') {
+                throw new InvalidOAuthStateException('OAuth callback did not include a state value.');
             }
 
-            $driver->stateless();
-        } elseif (($config['stateless'] ?? true) === true) {
+            // Normally the broker consumes state first. This fallback keeps the
+            // adapter safe when called directly by an integration.
+            $consumed = $this->stateStore()->consume(
+                $context->provider,
+                $incomingState,
+                $context->request ?: request(),
+            );
+            $context = $context->withAuthorizationState($consumed);
+            $config = ProviderConfig::get($context->provider, $context);
+        }
+
+        $driver = $this->driver(
+            $context->provider,
+            $context,
+            $context->authorizationState,
+        );
+
+        if ($this->oauthStateEnabled() || ($config['stateless'] ?? true) === true) {
             $driver->stateless();
         }
 
-        return $this->normalize($context->provider, $driver->user());
+        if ($driver instanceof PkceGoogleProvider) {
+            $user = $driver->userWithVerifiedIdToken(
+                $context->authorizationState?->nonce,
+            );
+        } else {
+            $user = $driver->user();
+        }
+
+        return $this->normalize($context->provider, $user);
     }
 
     public function userFromToken(string $token, AuthContext $context): ExternalIdentity
     {
-        return $this->normalize($context->provider, $this->driver($context->provider)->userFromToken($token));
+        $driver = $this->driver($context->provider, $context, $context->authorizationState);
+        $user = $driver->userFromToken($token);
+        $identity = $this->normalize($context->provider, $user);
+
+        if (
+            $context->provider === 'google'
+            && $context->providerTokenType === 'id_token'
+            && $context->authorizationState?->nonce
+        ) {
+            $actualNonce = (string) ($identity->claims['nonce'] ?? '');
+
+            if ($actualNonce === '' || ! hash_equals($context->authorizationState->nonce, $actualNonce)) {
+                throw new InvalidProviderTokenException('Google ID token nonce mismatch.');
+            }
+        }
+
+        return $identity;
     }
 
-    protected function driver(string $provider): mixed
-    {
-        $config = ProviderConfig::get($provider);
+    protected function driver(
+        string $provider,
+        AuthContext $context,
+        ?OAuthAuthorizationState $state = null,
+    ): mixed {
+        $config = ProviderConfig::get($provider, $context);
         $socialiteDriver = $config['socialite_driver'] ?? $provider;
+
+        if ($socialiteDriver === 'google') {
+            return (new PkceGoogleProvider(
+                $context->request ?: request(),
+                $config['client_id'] ?? null,
+                $config['client_secret'] ?? null,
+                $state?->redirectUri ?: ($config['redirect_uri'] ?? null),
+            ))->withCodeVerifier($state?->codeVerifier);
+        }
 
         config()->set("services.$socialiteDriver.client_id", $config['client_id'] ?? null);
         config()->set("services.$socialiteDriver.client_secret", $config['client_secret'] ?? null);
-        config()->set("services.$socialiteDriver.redirect", $config['redirect_uri'] ?? null);
+        config()->set("services.$socialiteDriver.redirect", $state?->redirectUri ?: ($config['redirect_uri'] ?? null));
 
         return Socialite::driver($socialiteDriver);
     }
