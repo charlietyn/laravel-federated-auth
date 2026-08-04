@@ -4,6 +4,7 @@ namespace Ronu\LaravelFederatedAuth;
 
 use Illuminate\Support\ServiceProvider;
 use Ronu\LaravelFederatedAuth\Console\MigrateCommand;
+use Ronu\LaravelFederatedAuth\Contracts\AuthenticationTransactionInterface;
 use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
@@ -22,6 +23,7 @@ use Ronu\LaravelFederatedAuth\Providers\KeycloakProviderAdapter;
 use Ronu\LaravelFederatedAuth\Repositories\DatabaseIdentityLinkRepository;
 use Ronu\LaravelFederatedAuth\Services\CacheOAuthStateStore;
 use Ronu\LaravelFederatedAuth\Services\ConfigurableUserResolver;
+use Ronu\LaravelFederatedAuth\Services\DatabaseAuthenticationTransaction;
 use Ronu\LaravelFederatedAuth\Services\DefaultUserStatusChecker;
 use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 use Ronu\LaravelFederatedAuth\Services\IdentityProviderRegistry;
@@ -85,6 +87,7 @@ class FederatedAuthServiceProvider extends ServiceProvider
     private function contractBindings(): array
     {
         return [
+            AuthenticationTransactionInterface::class => DatabaseAuthenticationTransaction::class,
             IdentityLinkRepositoryInterface::class => DatabaseIdentityLinkRepository::class,
             OAuthStateStoreInterface::class => CacheOAuthStateStore::class,
             UserResolverInterface::class => ConfigurableUserResolver::class,
