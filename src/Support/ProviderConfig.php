@@ -27,8 +27,9 @@ final class ProviderConfig
 
         $clients = $config['clients'] ?? [];
         $channel = $context?->channel;
+        $usesChannelClients = is_array($clients) && $clients !== [];
 
-        if (is_array($clients) && $clients !== []) {
+        if ($usesChannelClients) {
             if (! is_string($channel) || $channel === '') {
                 throw new ProviderDisabledException(
                     "Provider [$provider] requires a trusted application channel."
@@ -47,7 +48,12 @@ final class ProviderConfig
             $config['resolved_channel'] = $channel;
         }
 
-        if (($config['require_client_id'] ?? true) && blank($config['client_id'] ?? null)) {
+        // Channel-client mode is fail-closed. Legacy flat provider
+        // configurations remain backwards compatible unless they explicitly
+        // set require_client_id=true.
+        $requiresClientId = (bool) ($config['require_client_id'] ?? $usesChannelClients);
+
+        if ($requiresClientId && blank($config['client_id'] ?? null)) {
             throw new ProviderDisabledException(
                 "Provider [$provider] does not have a client_id for the resolved channel."
             );
