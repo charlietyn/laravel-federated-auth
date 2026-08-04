@@ -140,7 +140,7 @@ class FederatedAuthBroker
 
         $user = null;
 
-        if (($cfg['allow_email_linking'] ?? false) === true) {
+        if ($this->emailLinkingAllowed($cfg, $context)) {
             if (config('federated-auth.security.deny_unverified_email_linking', true) && ! $identity->emailVerified) {
                 throw new EmailNotVerifiedException('Email linking requires a verified provider email.');
             }
@@ -207,6 +207,27 @@ class FederatedAuthBroker
         if ($requested && $allowed && ! in_array($requested, $allowed, true)) {
             throw new ProviderDisabledException("User type [$requested] is not allowed for provider [{$identity->provider}].");
         }
+    }
+
+    /**
+     * Providers may opt into verified-email linking globally or restrict it to
+     * selected local user types. An empty type list preserves the package's
+     * previous all-types behavior for backwards compatibility.
+     */
+    private function emailLinkingAllowed(array $cfg, AuthContext $context): bool
+    {
+        if (($cfg['allow_email_linking'] ?? false) !== true) {
+            return false;
+        }
+
+        $allowedUserTypes = $cfg['email_linking_allowed_user_types'] ?? [];
+
+        if (! is_array($allowedUserTypes) || $allowedUserTypes === []) {
+            return true;
+        }
+
+        return $context->userType !== null
+            && in_array($context->userType, $allowedUserTypes, true);
     }
 
     /**
