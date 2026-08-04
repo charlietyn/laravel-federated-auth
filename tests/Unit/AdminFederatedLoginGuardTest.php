@@ -36,6 +36,7 @@ class AdminFederatedLoginGuardTest extends TestCase
             'require_verified_email' => true,
             'auto_provision' => true,
             'allow_email_linking' => true,
+            'email_linking_allowed_user_types' => ['Admin'],
             'allowed_user_types' => ['Client', 'Admin'],
         ]);
         config()->set('federated-auth.security.prevent_admin_auto_provision', true);
