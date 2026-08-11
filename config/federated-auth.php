@@ -175,6 +175,60 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Observability
+    |--------------------------------------------------------------------------
+    |
+    | Optional structured trace of every federated flow, driven by the package
+    | events. Off by default so upgrading never starts writing to your log
+    | unasked; listen to the events yourself if you want a different shape.
+    |
+    | The raw OAuth state is never written — only a truncated, non-reversible
+    | digest, which is enough to join the redirect line to its callback line
+    | while being useless to anyone who reads the log.
+    |
+    */
+    'logging' => [
+        'enabled' => env('FEDERATED_AUTH_LOGGING_ENABLED', false),
+
+        // Null uses the application's default log channel.
+        'channel' => env('FEDERATED_AUTH_LOG_CHANNEL'),
+
+        // Per-event level overrides.
+        'levels' => [
+            'redirect_issued' => 'info',
+            'login_succeeded' => 'info',
+            'login_failed' => 'warning',
+            'user_provisioned' => 'info',
+            'account_linked' => 'info',
+        ],
+
+        // Email addresses are personal data; opt in explicitly.
+        'include_email' => env('FEDERATED_AUTH_LOG_INCLUDE_EMAIL', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted route context
+    |--------------------------------------------------------------------------
+    |
+    | Route-default keys read by AuthContext::fromTrustedRoute(). Applications
+    | that resolve the channel from the URL should register their routes with
+    | these defaults and build the context from them, so the values that pick
+    | the OAuth client, the callback URI and the required user type can never be
+    | supplied by the caller.
+    |
+    */
+    'trusted_route' => [
+        'keys' => [
+            'channel' => 'trusted_channel',
+            'user_type' => 'trusted_user_type',
+            'tenant_id' => 'trusted_tenant_id',
+            'guard' => 'trusted_guard',
+        ],
+    ],
+
     'response' => [
         'include_user' => true,
         'user_fields' => ['id', 'uuid', 'name', 'email', 'username', 'user_type', 'status_id', 'avatar'],
