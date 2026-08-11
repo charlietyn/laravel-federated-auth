@@ -2,8 +2,10 @@
 
 namespace Ronu\LaravelFederatedAuth;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Ronu\LaravelFederatedAuth\Console\MigrateCommand;
+use Ronu\LaravelFederatedAuth\Contracts\AuthenticationTransactionInterface;
 use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
@@ -22,9 +24,11 @@ use Ronu\LaravelFederatedAuth\Providers\KeycloakProviderAdapter;
 use Ronu\LaravelFederatedAuth\Repositories\DatabaseIdentityLinkRepository;
 use Ronu\LaravelFederatedAuth\Services\CacheOAuthStateStore;
 use Ronu\LaravelFederatedAuth\Services\ConfigurableUserResolver;
+use Ronu\LaravelFederatedAuth\Services\DatabaseAuthenticationTransaction;
 use Ronu\LaravelFederatedAuth\Services\DefaultUserStatusChecker;
 use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 use Ronu\LaravelFederatedAuth\Services\IdentityProviderRegistry;
+use Ronu\LaravelFederatedAuth\Services\Logging\FederatedAuthLogSubscriber;
 use Ronu\LaravelFederatedAuth\Services\NoopRoleMapper;
 use Ronu\LaravelFederatedAuth\Services\NullUserProvisioner;
 use Ronu\LaravelFederatedAuth\Services\Permissions\NullPermissionPayloadResolver;
@@ -59,6 +63,11 @@ class FederatedAuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Opt-in: upgrading must never start writing to a host's log unasked.
+        if (config('federated-auth.logging.enabled', false)) {
+            Event::subscribe(FederatedAuthLogSubscriber::class);
+        }
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 MigrateCommand::class,
@@ -85,6 +94,7 @@ class FederatedAuthServiceProvider extends ServiceProvider
     private function contractBindings(): array
     {
         return [
+            AuthenticationTransactionInterface::class => DatabaseAuthenticationTransaction::class,
             IdentityLinkRepositoryInterface::class => DatabaseIdentityLinkRepository::class,
             OAuthStateStoreInterface::class => CacheOAuthStateStore::class,
             UserResolverInterface::class => ConfigurableUserResolver::class,
