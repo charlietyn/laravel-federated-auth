@@ -2,6 +2,7 @@
 
 namespace Ronu\LaravelFederatedAuth;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Ronu\LaravelFederatedAuth\Console\MigrateCommand;
 use Ronu\LaravelFederatedAuth\Contracts\AuthenticationTransactionInterface;
@@ -27,6 +28,7 @@ use Ronu\LaravelFederatedAuth\Services\DatabaseAuthenticationTransaction;
 use Ronu\LaravelFederatedAuth\Services\DefaultUserStatusChecker;
 use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 use Ronu\LaravelFederatedAuth\Services\IdentityProviderRegistry;
+use Ronu\LaravelFederatedAuth\Services\Logging\FederatedAuthLogSubscriber;
 use Ronu\LaravelFederatedAuth\Services\NoopRoleMapper;
 use Ronu\LaravelFederatedAuth\Services\NullUserProvisioner;
 use Ronu\LaravelFederatedAuth\Services\Permissions\NullPermissionPayloadResolver;
@@ -61,6 +63,11 @@ class FederatedAuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Opt-in: upgrading must never start writing to a host's log unasked.
+        if (config('federated-auth.logging.enabled', false)) {
+            Event::subscribe(FederatedAuthLogSubscriber::class);
+        }
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 MigrateCommand::class,
