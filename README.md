@@ -129,9 +129,9 @@ php artisan vendor:publish --tag=federated-auth-docs
 |---|---:|
 | PHP | `^8.2` |
 | Laravel / Illuminate | `^11.0` or `^12.0` |
-| Laravel Socialite | `^5.15` |
-| Guzzle | `^7.8` |
-| firebase/php-jwt | `^6.10` |
+| Laravel Socialite | `^5.24.1` |
+| Guzzle | `^7.15.2` |
+| firebase/php-jwt | `^7.0` |
 
 ---
 

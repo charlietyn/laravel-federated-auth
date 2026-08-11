@@ -21,7 +21,7 @@
     "illuminate/routing": "^11.0|^12.0",
     "illuminate/database": "^11.0|^12.0",
     "laravel/socialite": "^5.24.1",
-    "guzzlehttp/guzzle": "^7.8",
+    "guzzlehttp/guzzle": "^7.15.2",
     "firebase/php-jwt": "^7.0"
   },
   "suggest": {
