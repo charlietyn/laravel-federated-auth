@@ -19,9 +19,15 @@ class ConfigurableUserResolver implements UserResolverInterface
             return null;
         }
 
-        return $model::query()
-            ->where(config('federated-auth.user.primary_key', 'id'), $userId)
-            ->first();
+        $query = $model::query()
+            ->where(config('federated-auth.user.primary_key', 'id'), $userId);
+        $typeColumn = config('federated-auth.user.columns.type');
+
+        if ($typeColumn && $context->userType) {
+            $query->where($typeColumn, $context->userType);
+        }
+
+        return $query->first();
     }
 
     public function resolveByExternalIdentity(ExternalIdentity $identity, AuthContext $context): ?Authenticatable

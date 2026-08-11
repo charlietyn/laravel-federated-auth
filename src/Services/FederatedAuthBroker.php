@@ -140,7 +140,7 @@ class FederatedAuthBroker
 
         $user = null;
 
-        if (($cfg['allow_email_linking'] ?? false) === true) {
+        if ($this->emailLinkingAllowed($cfg, $context)) {
             if (config('federated-auth.security.deny_unverified_email_linking', true) && ! $identity->emailVerified) {
                 throw new EmailNotVerifiedException('Email linking requires a verified provider email.');
             }
@@ -155,6 +155,7 @@ class FederatedAuthBroker
                 throw new UserProvisioningNotConfiguredException('External identity is not linked and auto provisioning is disabled.');
             }
 
+            $this->ensureCanAutoProvision($context);
             $user = $this->provisioner->provision($identity, $context);
             $wasProvisioned = true;
             Event::dispatch(new ExternalUserProvisioned($user, $identity, $context));
@@ -206,13 +207,48 @@ class FederatedAuthBroker
         if ($requested && $allowed && ! in_array($requested, $allowed, true)) {
             throw new ProviderDisabledException("User type [$requested] is not allowed for provider [{$identity->provider}].");
         }
+    }
 
-        if (config('federated-auth.security.prevent_admin_auto_provision', true)) {
-            $admin = config('federated-auth.security.admin_user_types', []);
+    /**
+     * Providers may opt into verified-email linking globally or restrict it to
+     * selected local user types. An empty type list preserves the package's
+     * previous all-types behavior for backwards compatibility.
+     */
+    private function emailLinkingAllowed(array $cfg, AuthContext $context): bool
+    {
+        if (($cfg['allow_email_linking'] ?? false) !== true) {
+            return false;
+        }
 
-            if ($requested && in_array($requested, $admin, true)) {
-                throw new ProviderDisabledException('Admin users cannot be auto-provisioned through federated auth.');
-            }
+        $allowedUserTypes = $cfg['email_linking_allowed_user_types'] ?? [];
+
+        if ($allowedUserTypes === []) {
+            return true;
+        }
+
+        if (! is_array($allowedUserTypes)) {
+            return false;
+        }
+
+        return $context->userType !== null
+            && in_array($context->userType, $allowedUserTypes, true);
+    }
+
+    /**
+     * Admin identities may authenticate when they are already linked or match a
+     * verified local account. The security flag only blocks creating a new
+     * privileged local account from provider data.
+     */
+    private function ensureCanAutoProvision(AuthContext $context): void
+    {
+        if (! config('federated-auth.security.prevent_admin_auto_provision', true)) {
+            return;
+        }
+
+        $adminUserTypes = config('federated-auth.security.admin_user_types', []);
+
+        if ($context->userType && in_array($context->userType, $adminUserTypes, true)) {
+            throw new ProviderDisabledException('Admin users cannot be auto-provisioned through federated auth.');
         }
     }
 
