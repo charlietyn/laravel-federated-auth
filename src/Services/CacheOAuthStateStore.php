@@ -21,7 +21,8 @@ class CacheOAuthStateStore implements OAuthStateStoreInterface
         $pkceEnabled = (bool) config('federated-auth.security.pkce.enabled', true);
         $nonceEnabled = (bool) config('federated-auth.security.oidc.nonce_enabled', true);
         $request = $context->request;
-        $fallbackRedirectUri = $attributes['redirect_uri'] ?? ProviderConfig::value($provider, 'redirect_uri');
+        $fallbackRedirectUri = $attributes['redirect_uri']
+            ?? ProviderConfig::value($provider, 'redirect_uri', null, $context);
         $redirectUri = OAuthSecurity::validateRedirectUri($context->redirectUri, $fallbackRedirectUri);
         $codeVerifier = $pkceEnabled ? ($attributes['code_verifier'] ?? OAuthSecurity::codeVerifier()) : null;
         $state = new OAuthAuthorizationState(
