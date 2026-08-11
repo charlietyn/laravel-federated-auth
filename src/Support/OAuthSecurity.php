@@ -27,6 +27,25 @@ final class OAuthSecurity
         return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 
+    /**
+     * Short, non-reversible correlation key for a one-time OAuth state.
+     *
+     * OAuth splits one logical login across two unrelated HTTP requests, and the
+     * only value shared by both is the state. But the state is an anti-CSRF
+     * token: a leaked one is replayable until it is consumed, so it must never
+     * reach a log file, an error report or an APM span. This digest is enough to
+     * join the redirect line to its callback line while being useless to anyone
+     * who reads the log.
+     */
+    public static function stateDigest(?string $state, int $length = 12): ?string
+    {
+        if (! is_string($state) || $state === '') {
+            return null;
+        }
+
+        return substr(hash('sha256', $state), 0, max(8, $length));
+    }
+
     public static function fingerprint(Request $request, bool $bindUserAgent = true, bool $bindIp = false): array
     {
         $fingerprint = [];

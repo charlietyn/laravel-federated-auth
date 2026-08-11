@@ -17,7 +17,9 @@ use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\AuthResult;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
 use Ronu\LaravelFederatedAuth\Events\ExternalAccountLinked;
+use Ronu\LaravelFederatedAuth\Events\ExternalLoginFailed;
 use Ronu\LaravelFederatedAuth\Events\ExternalLoginSucceeded;
+use Ronu\LaravelFederatedAuth\Events\ExternalRedirectIssued;
 use Ronu\LaravelFederatedAuth\Events\ExternalUserProvisioned;
 use Ronu\LaravelFederatedAuth\Exceptions\EmailNotVerifiedException;
 use Ronu\LaravelFederatedAuth\Exceptions\EmailRequiredException;
@@ -27,7 +29,9 @@ use Ronu\LaravelFederatedAuth\Exceptions\LastIdentityUnlinkDeniedException;
 use Ronu\LaravelFederatedAuth\Exceptions\PackageDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\ProviderDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\UserProvisioningNotConfiguredException;
+use Ronu\LaravelFederatedAuth\Support\OAuthSecurity;
 use Ronu\LaravelFederatedAuth\Support\ProviderConfig;
+use Throwable;
 
 class FederatedAuthBroker
 {
@@ -48,26 +52,52 @@ class FederatedAuthBroker
         $this->ensurePackageEnabled();
         ProviderConfig::get($provider, $context);
 
-        return $this->providers->adapterFor($provider)->redirectUrl($context);
+        $url = $this->providers->adapterFor($provider)->redirectUrl($context);
+
+        // The adapter mints the one-time state internally, so the broker never
+        // sees it directly — but it is a query parameter of the URL just built,
+        // which is the same value by construction. Reading it back is what lets
+        // the outbound leg carry the correlation digest that joins it to the
+        // callback, without widening IdentityProviderAdapterInterface.
+        Event::dispatch(new ExternalRedirectIssued(
+            $provider,
+            $context,
+            OAuthSecurity::stateDigest($this->stateFromAuthorizationUrl($url)),
+        ));
+
+        return $url;
     }
 
     public function loginFromCallback(string $provider, AuthContext $context): AuthResult
     {
         $this->ensurePackageEnabled();
 
-        $context = $this->contextForCallback($provider, $context);
-        $identity = $this->providers->adapterFor($provider)->userFromCallback($context);
+        try {
+            $context = $this->contextForCallback($provider, $context);
+            $identity = $this->providers->adapterFor($provider)->userFromCallback($context);
 
-        return $this->authenticateIdentity($identity, $context);
+            return $this->authenticateIdentity($identity, $context);
+        } catch (Throwable $exception) {
+            $this->reportLoginFailure($context, $exception, $identity ?? null);
+
+            throw $exception;
+        }
     }
 
     public function loginFromToken(string $provider, string $token, AuthContext $context): AuthResult
     {
         $this->ensurePackageEnabled();
-        ProviderConfig::get($provider, $context);
-        $identity = $this->providers->adapterFor($provider)->userFromToken($token, $context);
 
-        return $this->authenticateIdentity($identity, $context);
+        try {
+            ProviderConfig::get($provider, $context);
+            $identity = $this->providers->adapterFor($provider)->userFromToken($token, $context);
+
+            return $this->authenticateIdentity($identity, $context);
+        } catch (Throwable $exception) {
+            $this->reportLoginFailure($context, $exception, $identity ?? null);
+
+            throw $exception;
+        }
     }
 
     public function linkIdentity(Authenticatable $user, ExternalIdentity $identity, AuthContext $context): AuthResult
@@ -180,6 +210,48 @@ class FederatedAuthBroker
         $this->roleMapper->sync($user, $identity, $context);
 
         return $this->success($user, $identity, $context, $wasProvisioned, true);
+    }
+
+    /**
+     * Emit the failure signal for the two public authentication entry points.
+     *
+     * Deliberately not emitted from authenticateIdentity(): loginFromCallback()
+     * and loginFromToken() delegate to it, so reporting in both places would
+     * dispatch the same failure twice. Reporting at the entry points also covers
+     * everything that can fail *before* an identity exists — state consumption,
+     * provider token verification — which is where redirect flows most often die.
+     *
+     * A listener must never break authentication, so a broken listener is
+     * swallowed: the original exception is the one that matters and is rethrown
+     * by the caller regardless.
+     */
+    private function reportLoginFailure(
+        AuthContext $context,
+        Throwable $exception,
+        ?ExternalIdentity $identity = null,
+    ): void {
+        try {
+            Event::dispatch(new ExternalLoginFailed(null, $identity, $context, $exception));
+        } catch (Throwable) {
+            // Intentionally ignored.
+        }
+    }
+
+    /**
+     * Extract the `state` query parameter from a freshly built authorization URL.
+     */
+    private function stateFromAuthorizationUrl(string $url): ?string
+    {
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        if (! is_string($query) || $query === '') {
+            return null;
+        }
+
+        parse_str($query, $parameters);
+        $state = $parameters['state'] ?? null;
+
+        return is_string($state) && $state !== '' ? $state : null;
     }
 
     private function contextForCallback(string $provider, AuthContext $context): AuthContext

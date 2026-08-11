@@ -301,6 +301,94 @@ FEDERATED_AUTH_ALLOW_HTTP_LOCALHOST_REDIRECTS=false
 
 ---
 
+## Multi-channel applications: trusted route context
+
+`AuthContext::fromRequest()` reads `channel`, `user_type`, `tenant_id` and
+`guard` from the request body, query string or headers. That is fine for a
+single-channel application.
+
+It is **not** fine when those values select the OAuth client, the callback URI
+and the user type that will be accepted — then the caller would be choosing the
+terms of their own authentication. Use `fromTrustedRoute()` instead:
+
+```php
+// routes/admin.php — the default cannot be overridden by a request field.
+Route::get('/auth/google/login', [SignInController::class, 'redirect'])
+    ->defaults('trusted_channel', 'admin');
+```
+
+```php
+$context = AuthContext::fromTrustedRoute('google', $request, [
+    // Values your application derives server-side. NOT a way to pass request
+    // input back in.
+    'redirect_uri' => $this->policy->callbackUri($channel),
+    'metadata' => ['federated_login_only' => true],
+]);
+```
+
+Default keys live in `federated-auth.trusted_route.keys`. A route without the
+defaults yields a null channel, and `ProviderConfig` is fail-closed: it refuses
+to resolve a client rather than inferring one from the caller.
+
+---
+
+## Separating flows that share one provider
+
+An application often exposes more than one OAuth entry point on the same
+provider — plain sign-in and an invitation-gated registration, for example. The
+state store proves a state is authentic, unexpired, unused and bound to the same
+browser. It cannot prove it is being spent on the flow it was created for, so a
+state minted by the permissive flow would otherwise be redeemable at the
+restrictive one.
+
+```php
+$state = $this->states->consume('google', $incomingState, $request);
+
+$state->assertMatches([
+    'channel' => 'admin',
+    'metadata' => ['federated_login_only' => true],
+    'metadata_absent' => ['registration_type'],
+]);
+```
+
+Comparison is strict, and a state carrying no value for an expected key fails:
+the point is to prove the state *was* minted with it.
+
+---
+
+## Observability
+
+The package dispatches an event at every stage of a flow:
+
+| Event | When |
+|---|---|
+| `ExternalRedirectIssued` | An authorization URL was built; the browser is leaving for the provider. |
+| `ExternalLoginSucceeded` | An identity resolved to a local user and tokens were issued. |
+| `ExternalLoginFailed` | `loginFromCallback()` or `loginFromToken()` threw. |
+| `ExternalUserProvisioned` | A local user was created. |
+| `ExternalAccountLinked` | An identity was linked to an existing user. |
+
+`ExternalRedirectIssued` carries a truncated SHA-256 digest of the one-time
+state, and the same digest is derivable from `$event->context->state` on the
+callback side — so the two legs of one attempt can be joined in a log without
+ever writing a replayable token to it.
+
+A ready-made structured logger ships with the package, **off by default** so
+upgrading never starts writing to your log unasked:
+
+```env
+FEDERATED_AUTH_LOGGING_ENABLED=true
+FEDERATED_AUTH_LOG_CHANNEL=stack        # optional; defaults to your default channel
+FEDERATED_AUTH_LOG_INCLUDE_EMAIL=false  # email addresses are personal data
+```
+
+It records the provider, channel, user type, tenant, state digest and outcome.
+It never records the raw state, authorization codes, tokens, client secrets or
+exception messages (provider errors routinely embed a code fragment). If you
+want a different shape, leave it off and listen to the events yourself.
+
+---
+
 ## Identity link model
 
 The package links external identities to local users using this conceptual key:
