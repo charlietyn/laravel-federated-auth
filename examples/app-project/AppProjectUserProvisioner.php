@@ -11,7 +11,7 @@ use Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
 
-class RonuUserProvisioner implements UserProvisionerInterface
+class AppProjectUserProvisioner implements UserProvisionerInterface
 {
     public function provision(ExternalIdentity $identity, AuthContext $context): Authenticatable
     {
@@ -20,7 +20,7 @@ class RonuUserProvisioner implements UserProvisionerInterface
             if ($userType !== 'Client') {
                 abort(422, 'Only Client users can be auto-provisioned through federated auth.');
             }
-            $user = Users::create(['username' => $this->makeUniqueUsername($identity), 'password' => Str::random(64), 'name' => $identity->name ?: ($identity->email ?: 'Ronu User'), 'last_name' => $identity->lastName, 'email' => $identity->email, 'phone' => null, 'user_type' => 'Client', 'status_id' => 1, 'avatar' => $identity->avatarUrl ?: 'images/users/user.png']);
+            $user = Users::create(['username' => $this->makeUniqueUsername($identity), 'password' => Str::random(64), 'name' => $identity->name ?: ($identity->email ?: 'AppProject User'), 'last_name' => $identity->lastName, 'email' => $identity->email, 'phone' => null, 'user_type' => 'Client', 'status_id' => 1, 'avatar' => $identity->avatarUrl ?: 'images/users/user.png']);
             Client::create(['uuid' => (string) Str::uuid(), 'address' => 'Pending address', 'user_id' => $user->id, 'status_id' => 1]);
             $user->array_role()->sync([4 => ['enabled' => true, 'user_id' => $user->id]]);
 

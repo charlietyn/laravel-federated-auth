@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Ronu\LaravelFederatedAuth\Console\MigrateCommand;
 use Ronu\LaravelFederatedAuth\Contracts\AuthenticationTransactionInterface;
 use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
+use Ronu\LaravelFederatedAuth\Contracts\ErrorReporterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
@@ -26,6 +27,7 @@ use Ronu\LaravelFederatedAuth\Services\CacheOAuthStateStore;
 use Ronu\LaravelFederatedAuth\Services\ConfigurableUserResolver;
 use Ronu\LaravelFederatedAuth\Services\DatabaseAuthenticationTransaction;
 use Ronu\LaravelFederatedAuth\Services\DefaultUserStatusChecker;
+use Ronu\LaravelFederatedAuth\Services\Errors\ConfigurableErrorReporter;
 use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 use Ronu\LaravelFederatedAuth\Services\IdentityProviderRegistry;
 use Ronu\LaravelFederatedAuth\Services\Logging\FederatedAuthLogSubscriber;
@@ -104,6 +106,10 @@ class FederatedAuthServiceProvider extends ServiceProvider
             RoleMapperInterface::class => NoopRoleMapper::class,
             PermissionPayloadResolverInterface::class => NullPermissionPayloadResolver::class,
             AuthResponseFormatterInterface::class => DefaultAuthResponseFormatter::class,
+            // Inert until `error_reporting.enabled` is true and a handler is
+            // named, so the default binding can be the useful one. Bind
+            // NullErrorReporter to switch capture off regardless of config.
+            ErrorReporterInterface::class => ConfigurableErrorReporter::class,
         ];
     }
 }

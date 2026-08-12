@@ -1,6 +1,8 @@
-# 06 - Ronu integration example
+# 06 - AppProject integration example
 
-Ronu is a complex Laravel project:
+`AppProject` is the fictional host application used throughout this
+documentation (see `docs/README.md` → *Naming in these docs*). It stands in for
+a complex Laravel project:
 
 - user model: `Modules\security\Models\Users`;
 - table: `security.users`;
@@ -38,14 +40,14 @@ Ronu is a complex Laravel project:
 
 ```php
 'bindings' => [
-    \Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface::class => \App\Auth\RonuUserProvisioner::class,
-    \Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface::class => \App\Auth\RonuJwtTokenIssuer::class,
+    \Ronu\LaravelFederatedAuth\Contracts\UserProvisionerInterface::class => \App\Auth\AppProjectUserProvisioner::class,
+    \Ronu\LaravelFederatedAuth\Contracts\TokenIssuerInterface::class => \App\Auth\AppProjectJwtTokenIssuer::class,
 ],
 ```
 
 ## Why custom provisioning is required
 
-A Ronu user is not only a row in `users`. For a Client login, provisioning must:
+An AppProject user is not only a row in `users`. For a Client login, provisioning must:
 
 1. create `security.users`;
 2. create `clients.client`;

@@ -161,7 +161,7 @@ This table links local users to external identities using:
 tenant_id + provider + provider_user_id
 ```
 
-For Ronu this can be changed to:
+For AppProject this can be changed to:
 
 ```php
 'table' => 'security.social_accounts'

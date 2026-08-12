@@ -32,7 +32,7 @@ composer test
 If your prompt looks like this:
 
 ```bat
-D:\Proyectos\Composer Libraries\ronu-laravel-federated-auth>
+C:\projects\laravel-federated-auth>
 ```
 
 then you are using Windows CMD.

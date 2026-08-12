@@ -387,6 +387,43 @@ It never records the raw state, authorization codes, tokens, client secrets or
 exception messages (provider errors routinely embed a code fragment). If you
 want a different shape, leave it off and listen to the events yourself.
 
+### Persisting errors
+
+Separately from the log, every failure the broker raises — redirect, callback,
+token login, link and unlink — can be handed to code you control so it lands in
+your own error table. Also off by default:
+
+```php
+// config/federated-auth.php
+'error_reporting' => [
+    'enabled' => true,
+    'handlers' => [
+        App\Jobs\LogErrorToDatabase::class,   // a queued job: gets the payload array
+        // 'App\Services\ErrorLogService@store',             // an existing service
+        // App\Reporting\ErrorLogReporter::class,            // an ErrorReporterInterface
+    ],
+    'queue' => ['queue' => 'logs', 'after_response' => true],
+],
+```
+
+A handler may be a queued job (constructed with the payload row and dispatched),
+a `'Service@method'` string, an invokable class or closure, or a class
+implementing `ErrorReporterInterface` (which receives the `FederatedAuthError`
+DTO instead of the array). Handlers are called with `($payload, $error)`, and a
+method declaring only the first parameter still works — an existing
+`handle(array $data)` needs no change.
+
+The payload is scrubbed before it leaves the package: authorization codes,
+state, `id_token`/`access_token`/`refresh_token`, client secrets, `Authorization`
+headers, cookies and bare JWTs are redacted from the message, the request dump
+and the stack trace. That is not configurable off — an error table that outlives
+the request must not become a credential store. The `state_digest` survives, so
+the row still joins to the redirect leg in your log.
+
+Capture never changes control flow: the original exception is always rethrown,
+and a reporter that throws is swallowed rather than replacing the authentication
+error. Full reference in `docs/18-error-reporting.md`.
+
 ---
 
 ## Identity link model
@@ -414,6 +451,7 @@ Do not use email as the federated identity key. Apple can return private relay e
 | `OAuthStateStoreInterface` | Store and consume OAuth state. |
 | `AuthResponseFormatterInterface` | Format API responses. |
 | `PermissionPayloadResolverInterface` | Append optional permission payloads. |
+| `ErrorReporterInterface` | Persist broker failures to your own error store. |
 
 ---
 

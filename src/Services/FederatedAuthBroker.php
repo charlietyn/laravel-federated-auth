@@ -5,6 +5,7 @@ namespace Ronu\LaravelFederatedAuth\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Event;
 use Ronu\LaravelFederatedAuth\Contracts\AuthenticationTransactionInterface;
+use Ronu\LaravelFederatedAuth\Contracts\ErrorReporterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityProviderRegistryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
@@ -16,6 +17,7 @@ use Ronu\LaravelFederatedAuth\Contracts\UserStatusCheckerInterface;
 use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\AuthResult;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
+use Ronu\LaravelFederatedAuth\DTO\FederatedAuthError;
 use Ronu\LaravelFederatedAuth\Events\ExternalAccountLinked;
 use Ronu\LaravelFederatedAuth\Events\ExternalLoginFailed;
 use Ronu\LaravelFederatedAuth\Events\ExternalLoginSucceeded;
@@ -45,9 +47,26 @@ class FederatedAuthBroker
         private readonly RoleMapperInterface $roleMapper,
         private readonly OAuthStateStoreInterface $states,
         private readonly ?AuthenticationTransactionInterface $transactions = null,
+        // Nullable and last so that hosts (and tests) constructing the broker
+        // positionally keep working; a null reporter simply captures nothing.
+        private readonly ?ErrorReporterInterface $errors = null,
     ) {}
 
     public function redirectUrl(string $provider, AuthContext $context): string
+    {
+        try {
+            return $this->buildRedirectUrl($provider, $context);
+        } catch (Throwable $exception) {
+            // A redirect that never gets built is invisible otherwise: no
+            // callback arrives, so no login failure is ever recorded, and the
+            // user just sees a dead button. This is the leg worth capturing.
+            $this->captureError(FederatedAuthError::OPERATION_REDIRECT, $context, $exception);
+
+            throw $exception;
+        }
+    }
+
+    private function buildRedirectUrl(string $provider, AuthContext $context): string
     {
         $this->ensurePackageEnabled();
         ProviderConfig::get($provider, $context);
@@ -78,7 +97,12 @@ class FederatedAuthBroker
 
             return $this->authenticateIdentity($identity, $context);
         } catch (Throwable $exception) {
-            $this->reportLoginFailure($context, $exception, $identity ?? null);
+            $this->reportLoginFailure(
+                $context,
+                $exception,
+                $identity ?? null,
+                FederatedAuthError::OPERATION_LOGIN_CALLBACK,
+            );
 
             throw $exception;
         }
@@ -94,7 +118,12 @@ class FederatedAuthBroker
 
             return $this->authenticateIdentity($identity, $context);
         } catch (Throwable $exception) {
-            $this->reportLoginFailure($context, $exception, $identity ?? null);
+            $this->reportLoginFailure(
+                $context,
+                $exception,
+                $identity ?? null,
+                FederatedAuthError::OPERATION_LOGIN_TOKEN,
+            );
 
             throw $exception;
         }
@@ -128,10 +157,27 @@ class FederatedAuthBroker
             return new AuthResult($user, $result->tokens, $identity, false, true, $result->metadata);
         };
 
-        return $this->runTransaction($operation);
+        try {
+            return $this->runTransaction($operation);
+        } catch (Throwable $exception) {
+            $this->captureError(FederatedAuthError::OPERATION_LINK, $context, $exception, $identity, $user);
+
+            throw $exception;
+        }
     }
 
     public function unlink(Authenticatable $user, string $provider, AuthContext $context): void
+    {
+        try {
+            $this->unlinkIdentity($user, $provider, $context);
+        } catch (Throwable $exception) {
+            $this->captureError(FederatedAuthError::OPERATION_UNLINK, $context, $exception, null, $user);
+
+            throw $exception;
+        }
+    }
+
+    private function unlinkIdentity(Authenticatable $user, string $provider, AuthContext $context): void
     {
         $this->ensurePackageEnabled();
         ProviderConfig::get($provider, $context);
@@ -229,11 +275,50 @@ class FederatedAuthBroker
         AuthContext $context,
         Throwable $exception,
         ?ExternalIdentity $identity = null,
+        string $operation = FederatedAuthError::OPERATION_LOGIN_CALLBACK,
     ): void {
         try {
             Event::dispatch(new ExternalLoginFailed(null, $identity, $context, $exception));
         } catch (Throwable) {
             // Intentionally ignored.
+        }
+
+        $this->captureError($operation, $context, $exception, $identity);
+    }
+
+    /**
+     * Hand the failure to the configured error reporter.
+     *
+     * Separate from the event above because the two answer different questions.
+     * The event is a domain signal about *login*, and firing it for a failed
+     * unlink would be a lie to every existing listener. This path is about
+     * durable capture and covers every operation the broker exposes.
+     *
+     * The reporter is guarded here as well as internally: a host binding its own
+     * ErrorReporterInterface must not be able to replace an authentication error
+     * with a database error from the code that was trying to record it.
+     */
+    private function captureError(
+        string $operation,
+        AuthContext $context,
+        Throwable $exception,
+        ?ExternalIdentity $identity = null,
+        ?Authenticatable $user = null,
+    ): void {
+        if (! $this->errors) {
+            return;
+        }
+
+        try {
+            $this->errors->report(new FederatedAuthError(
+                operation: $operation,
+                exception: $exception,
+                context: $context,
+                identity: $identity,
+                user: $user,
+            ));
+        } catch (Throwable) {
+            // Intentionally ignored — see the docblock.
         }
     }
 

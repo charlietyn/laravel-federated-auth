@@ -1,6 +1,7 @@
 <?php
 
 use Ronu\LaravelFederatedAuth\Contracts\AuthResponseFormatterInterface;
+use Ronu\LaravelFederatedAuth\Contracts\ErrorReporterInterface;
 use Ronu\LaravelFederatedAuth\Contracts\IdentityLinkRepositoryInterface;
 use Ronu\LaravelFederatedAuth\Contracts\OAuthStateStoreInterface;
 use Ronu\LaravelFederatedAuth\Contracts\PermissionPayloadResolverInterface;
@@ -13,6 +14,7 @@ use Ronu\LaravelFederatedAuth\Repositories\DatabaseIdentityLinkRepository;
 use Ronu\LaravelFederatedAuth\Services\CacheOAuthStateStore;
 use Ronu\LaravelFederatedAuth\Services\ConfigurableUserResolver;
 use Ronu\LaravelFederatedAuth\Services\DefaultUserStatusChecker;
+use Ronu\LaravelFederatedAuth\Services\Errors\ConfigurableErrorReporter;
 use Ronu\LaravelFederatedAuth\Services\NoopRoleMapper;
 use Ronu\LaravelFederatedAuth\Services\NullUserProvisioner;
 use Ronu\LaravelFederatedAuth\Services\Permissions\NullPermissionPayloadResolver;
@@ -210,6 +212,88 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Error reporting
+    |--------------------------------------------------------------------------
+    |
+    | Durable capture of every failure the broker raises — redirect, callback,
+    | token login, link and unlink. The package owns no error table: it
+    | normalizes the failure into a FederatedAuthError and hands it to the
+    | handlers below, which is where the host's own error log takes over.
+    |
+    | Each handler may be:
+    |
+    |   1. A class implementing ErrorReporterInterface — receives the DTO:
+    |          Ronu\LaravelFederatedAuth\Contracts\ErrorReporterInterface
+    |   2. A queued job — constructed with the payload array and dispatched:
+    |          App\Jobs\LogErrorToDatabase::class
+    |   3. 'Service@method' — an existing service called with (payload, error):
+    |          'App\Services\ErrorLogService@store'
+    |   4. Any invokable class or closure — called with (payload, error).
+    |
+    | Handlers are called with two arguments; a handler that only declares the
+    | first one still works, so an existing `handle(array $data)` needs no
+    | change. Nothing here runs until `enabled` is true.
+    |
+    */
+    'error_reporting' => [
+        'enabled' => env('FEDERATED_AUTH_ERROR_REPORTING_ENABLED', false),
+
+        'handlers' => [
+            // App\Jobs\LogErrorToDatabase::class,
+        ],
+
+        // Applied when a handler is a queued job.
+        'queue' => [
+            'connection' => env('FEDERATED_AUTH_ERROR_QUEUE_CONNECTION'),
+            'queue' => env('FEDERATED_AUTH_ERROR_QUEUE', 'logs'),
+
+            // Defer the write until after the response is sent. Requires the
+            // terminable middleware stack, so it does nothing under queue:work
+            // or in tests — off by default to keep behaviour predictable.
+            'after_response' => env('FEDERATED_AUTH_ERROR_QUEUE_AFTER_RESPONSE', false),
+        ],
+
+        // Exceptions never worth a row. Expired or replayed state is the normal
+        // result of a user leaving a login tab open, not an incident.
+        'ignore_exceptions' => [
+            // Ronu\LaravelFederatedAuth\Exceptions\InvalidOAuthStateException::class,
+        ],
+
+        // When non-empty, ONLY these are reported (evaluated after the ignore
+        // list). Useful to narrow capture to genuine provider/infra failures.
+        'only_exceptions' => [],
+
+        'payload' => [
+            // Stack frames help; frame *arguments* are never included, since the
+            // provider token is an argument to half the frames in this package.
+            'include_trace' => true,
+            'trace_frames' => 15,
+
+            'include_request' => true,
+            'include_headers' => true,
+
+            // Email is personal data, and on Apple it is a private-relay address.
+            'include_email' => false,
+
+            // Extra keys to redact, on top of the always-redacted OAuth set
+            // (code, state, id_token, access_token, client_secret, authorization,
+            // cookie, …) which cannot be disabled.
+            'sensitive_keys' => [],
+
+            // Restrict the payload to the columns your error table actually has.
+            // Leave empty to pass every key through.
+            //
+            // Full key set: description, error, exception, code, file, line,
+            // status_code, operation, provider, channel, user_type, tenant_id,
+            // guard, state_digest, provider_user_id, email, ip, path,
+            // parameters, request, headers, user_id, username, created_at,
+            // updated_at.
+            'only' => [],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Trusted route context
     |--------------------------------------------------------------------------
     |
@@ -253,5 +337,10 @@ return [
         RoleMapperInterface::class => NoopRoleMapper::class,
         PermissionPayloadResolverInterface::class => NullPermissionPayloadResolver::class,
         AuthResponseFormatterInterface::class => DefaultAuthResponseFormatter::class,
+
+        // Reads `error_reporting.handlers` above. Swap for your own class to
+        // take full control, or for NullErrorReporter to disable capture
+        // outright regardless of the config block.
+        ErrorReporterInterface::class => ConfigurableErrorReporter::class,
     ],
 ];

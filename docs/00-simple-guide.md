@@ -847,8 +847,8 @@ Example config:
 ```env
 FEDERATED_AUTH_KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=https://auth.example.com
-KEYCLOAK_REALM=ronu
-KEYCLOAK_CLIENT_ID=ronu-api
+KEYCLOAK_REALM=app-project
+KEYCLOAK_CLIENT_ID=app-project-api
 KEYCLOAK_CLIENT_SECRET=secret
 KEYCLOAK_REDIRECT_URI=https://api.example.com/api/auth/federated/keycloak/callback
 ```

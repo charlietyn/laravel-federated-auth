@@ -33,9 +33,9 @@ Pipeline: **Provider adapter** normalizes the provider response into an `Externa
 
 ### Contract-first design (the core idea)
 
-`FederatedAuthServiceProvider::contractBindings()` maps every interface in `src/Contracts/` to a default implementation, but each binding is overridable via `config('federated-auth.bindings.<Interface>')`. **The host app customizes behavior by binding its own implementations — not by editing package code.** The `examples/` directory shows real host implementations (`RonuUserProvisioner`, `RonuJwtTokenIssuer`, `StandardUserProvisioner`) — these are documentation samples, not autoloaded package code.
+`FederatedAuthServiceProvider::contractBindings()` maps every interface in `src/Contracts/` to a default implementation, but each binding is overridable via `config('federated-auth.bindings.<Interface>')`. **The host app customizes behavior by binding its own implementations — not by editing package code.** The `examples/` directory shows real host implementations (`AppProjectUserProvisioner`, `AppProjectJwtTokenIssuer`, `StandardUserProvisioner`) — these are documentation samples, not autoloaded package code.
 
-Defaults worth knowing: `UserProvisionerInterface` → `NullUserProvisioner` (provisioning is off until the host binds one), `TokenIssuerInterface` → `JwtAuthTokenIssuer`, `RoleMapperInterface` → `NoopRoleMapper`, `OAuthStateStoreInterface` → `CacheOAuthStateStore`. Alternative token issuers ship in `src/Services/TokenIssuers/` (Sanctum, Session).
+Defaults worth knowing: `UserProvisionerInterface` → `NullUserProvisioner` (provisioning is off until the host binds one), `TokenIssuerInterface` → `JwtAuthTokenIssuer`, `RoleMapperInterface` → `NoopRoleMapper`, `OAuthStateStoreInterface` → `CacheOAuthStateStore`, `ErrorReporterInterface` → `ConfigurableErrorReporter` (inert until `error_reporting.enabled` is true and a handler is named). Alternative token issuers ship in `src/Services/TokenIssuers/` (Sanctum, Session).
 
 ### Provider adapters
 
@@ -53,6 +53,7 @@ When adding a provider: create the adapter, register it in `FederatedAuthService
 - Redirect URIs are validated by `OAuthSecurity::validateRedirectUri()` (HTTPS-only unless localhost-http is explicitly allowed; optional host allow-list).
 - `validateIdentity()` blocks auto-provisioning of admin user types (`prevent_admin_auto_provision`) and enforces `allowed_user_types`. Do not auto-provision privileged users from public social providers.
 - Provider tokens are not persisted by default.
+- **Nothing that leaves the package for durable storage may carry replayable OAuth material.** The log subscriber records only a `state_digest`; the error reporter (`src/Services/Errors/`) runs every payload through `Support\SensitiveDataScrubber`, which redacts codes, state, id/access/refresh tokens, client secrets, `Authorization` headers, cookies and bare JWTs from messages, request dumps and stack traces. That scrubbing is deliberately not configurable off — `payload.sensitive_keys` adds keys, never removes the defaults. Stack frame *arguments* are never serialized.
 
 ### DTOs & context
 
