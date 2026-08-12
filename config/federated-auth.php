@@ -41,6 +41,11 @@ return [
             'client_secret' => env('GOOGLE_CLIENT_SECRET'),
             'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
             'scopes' => ['openid', 'profile', 'email'],
+            // Optional provider authorization-screen parameters. Protected
+            // transaction fields such as state, nonce and PKCE are ignored.
+            'authorization_params' => array_filter([
+                'prompt' => env('FEDERATED_AUTH_GOOGLE_PROMPT'),
+            ], static fn ($value): bool => $value !== null && $value !== ''),
             'stateless' => env('FEDERATED_AUTH_STATELESS', true),
             'require_email' => true,
             'require_verified_email' => true,

@@ -143,6 +143,7 @@ FEDERATED_AUTH_ROUTES_ENABLED=true
 FEDERATED_AUTH_ROUTES_PREFIX=api/auth/federated
 
 FEDERATED_AUTH_GOOGLE_ENABLED=true
+FEDERATED_AUTH_GOOGLE_PROMPT=select_account # optional; empty keeps provider default
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=https://api.example.com/api/auth/federated/google/callback
@@ -161,6 +162,22 @@ KEYCLOAK_CLIENT_ID=my-api-client
 KEYCLOAK_CLIENT_SECRET=secret
 KEYCLOAK_REDIRECT_URI=https://api.example.com/api/auth/federated/keycloak/callback
 ```
+
+Providers may receive additional authorization-screen parameters from their
+server-side provider configuration:
+
+```php
+'authorization_params' => [
+    'prompt' => env('FEDERATED_AUTH_GOOGLE_PROMPT'),
+],
+```
+
+This is opt-in and supported by both Socialite-backed and generic OIDC
+providers. The package filters invalid values and never permits these parameters
+to override `state`, `nonce`, PKCE, client credentials, redirect URI, response
+type/mode or scopes. For Google, `prompt=select_account` keeps the user's global
+Google session open while requiring an explicit account choice for each new
+application login.
 
 ---
 

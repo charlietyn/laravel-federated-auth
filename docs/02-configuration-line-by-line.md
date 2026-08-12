@@ -76,6 +76,25 @@ Supported values:
 - `oidc`: generic OpenID Connect provider.
 - `keycloak`: Keycloak-specific convenience wrapper around OIDC.
 
+## Provider `authorization_params`
+
+```php
+'authorization_params' => [
+    'prompt' => env('FEDERATED_AUTH_GOOGLE_PROMPT'),
+],
+```
+
+Optional parameters passed to a Socialite-backed or generic OIDC provider's
+authorization request. For example, Google accepts `prompt=select_account` to
+show its account chooser without closing the user's global Google session.
+Empty values are ignored.
+
+Only server-side configuration is read. The package also rejects invalid or
+non-scalar values and reserves `state`, `nonce`, `code_challenge`,
+`code_challenge_method`, `client_id`, `client_secret`, `redirect_uri`,
+`response_type`, `response_mode` and `scope`, so customization cannot replace the OAuth
+transaction or provider credentials owned by the package.
+
 ## `require_email`
 
 ```php

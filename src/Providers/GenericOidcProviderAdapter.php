@@ -15,6 +15,7 @@ use Ronu\LaravelFederatedAuth\Exceptions\InvalidOAuthStateException;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidOidcTokenException;
 use Ronu\LaravelFederatedAuth\Support\ClaimReader;
 use Ronu\LaravelFederatedAuth\Support\OAuthSecurity;
+use Ronu\LaravelFederatedAuth\Support\ProviderAuthorizationParameters;
 use Ronu\LaravelFederatedAuth\Support\ProviderConfig;
 
 class GenericOidcProviderAdapter implements IdentityProviderAdapterInterface
@@ -51,13 +52,15 @@ class GenericOidcProviderAdapter implements IdentityProviderAdapterInterface
         $redirectUri = $authorizationState?->redirectUri
             ?: OAuthSecurity::validateRedirectUri($context->redirectUri, $config['redirect_uri'] ?? null);
 
-        $parameters = [
+        $parameters = array_replace(ProviderAuthorizationParameters::sanitize(
+            $config['authorization_params'] ?? []
+        ), [
             'client_id' => $config['client_id'],
             'redirect_uri' => $redirectUri,
             'response_type' => 'code',
             'scope' => implode(' ', $config['scopes'] ?? ['openid', 'profile', 'email']),
             'state' => $authorizationState?->state ?: ($context->state ?: OAuthSecurity::randomToken(32)),
-        ];
+        ]);
 
         if (($config['response_mode'] ?? null) !== null) {
             $parameters['response_mode'] = $config['response_mode'];

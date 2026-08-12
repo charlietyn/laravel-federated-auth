@@ -9,6 +9,7 @@ use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\DTO\ExternalIdentity;
 use Ronu\LaravelFederatedAuth\DTO\OAuthAuthorizationState;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidOAuthStateException;
+use Ronu\LaravelFederatedAuth\Support\ProviderAuthorizationParameters;
 use Ronu\LaravelFederatedAuth\Support\ProviderConfig;
 
 abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterface
@@ -29,7 +30,7 @@ abstract class SocialiteProviderAdapter implements IdentityProviderAdapterInterf
     public function redirectUrl(AuthContext $context): string
     {
         $config = ProviderConfig::get($context->provider, $context);
-        $with = [];
+        $with = ProviderAuthorizationParameters::sanitize($config['authorization_params'] ?? []);
         $state = null;
 
         if ($this->oauthStateEnabled()) {
