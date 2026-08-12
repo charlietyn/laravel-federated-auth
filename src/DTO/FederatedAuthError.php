@@ -17,6 +17,8 @@ use Ronu\LaravelFederatedAuth\Exceptions\LastIdentityUnlinkDeniedException;
 use Ronu\LaravelFederatedAuth\Exceptions\PackageDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\ProviderDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\ProviderNotSupportedException;
+use Ronu\LaravelFederatedAuth\Exceptions\ProviderTokenExpiredException;
+use Ronu\LaravelFederatedAuth\Exceptions\ProviderTokenNotYetValidException;
 use Ronu\LaravelFederatedAuth\Exceptions\UserDisabledException;
 use Ronu\LaravelFederatedAuth\Exceptions\UserProvisioningNotConfiguredException;
 use Ronu\LaravelFederatedAuth\Support\OAuthSecurity;
@@ -57,6 +59,8 @@ final class FederatedAuthError
     private const STATUS_CODES = [
         InvalidOAuthStateException::class => 401,
         InvalidOidcTokenException::class => 401,
+        ProviderTokenNotYetValidException::class => 503,
+        ProviderTokenExpiredException::class => 401,
         InvalidProviderTokenException::class => 401,
         EmailNotVerifiedException::class => 401,
         InvalidRedirectUriException::class => 400,

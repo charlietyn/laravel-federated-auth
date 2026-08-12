@@ -2,8 +2,13 @@
 
 namespace Ronu\LaravelFederatedAuth\Tests\Unit;
 
+use Firebase\JWT\BeforeValidException;
+use Firebase\JWT\ExpiredException;
+use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidProviderTokenException;
+use Ronu\LaravelFederatedAuth\Exceptions\ProviderTokenExpiredException;
+use Ronu\LaravelFederatedAuth\Exceptions\ProviderTokenNotYetValidException;
 use Ronu\LaravelFederatedAuth\Providers\PkceGoogleProvider;
 use Ronu\LaravelFederatedAuth\Tests\TestCase;
 
@@ -66,11 +71,54 @@ class PkceGoogleProviderTest extends TestCase
         $this->expectException(InvalidProviderTokenException::class);
         $provider->userFromVerifiedIdToken('header.payload.signature');
     }
+
+    public function test_temporal_clock_skew_failure_has_a_specific_exception_and_restores_global_leeway(): void
+    {
+        config()->set('federated-auth.security.oidc.clock_skew_seconds', 60);
+        JWT::$leeway = 7;
+        $provider = (new ExposedPkceGoogleProvider(
+            Request::create('/callback', 'GET'),
+            'client-id',
+            'secret',
+            'https://app.example.test/callback',
+        ))->withVerificationFailure(new BeforeValidException(
+            'Cannot handle token with iat prior to 2026-08-12T22:00:15+00:00'
+        ));
+
+        try {
+            $provider->userFromVerifiedIdToken('header.payload.signature');
+            $this->fail('The future token must be rejected.');
+        } catch (ProviderTokenNotYetValidException $exception) {
+            $this->assertInstanceOf(BeforeValidException::class, $exception->getPrevious());
+            $this->assertSame(60, $provider->observedLeeway);
+        } finally {
+            $this->assertSame(7, JWT::$leeway);
+            JWT::$leeway = 0;
+        }
+    }
+
+    public function test_expired_token_has_a_specific_exception(): void
+    {
+        $provider = (new ExposedPkceGoogleProvider(
+            Request::create('/callback', 'GET'),
+            'client-id',
+            'secret',
+            'https://app.example.test/callback',
+        ))->withVerificationFailure(new ExpiredException('Expired token'));
+
+        $this->expectException(ProviderTokenExpiredException::class);
+        $this->expectExceptionMessage('Google ID token has expired.');
+        $provider->userFromVerifiedIdToken('header.payload.signature');
+    }
 }
 
 final class ExposedPkceGoogleProvider extends PkceGoogleProvider
 {
     private array $claims = [];
+
+    private ?\Throwable $verificationFailure = null;
+
+    public ?int $observedLeeway = null;
 
     public function exposedTokenFields(string $code): array
     {
@@ -84,8 +132,21 @@ final class ExposedPkceGoogleProvider extends PkceGoogleProvider
         return $this;
     }
 
+    public function withVerificationFailure(\Throwable $exception): self
+    {
+        $this->verificationFailure = $exception;
+
+        return $this;
+    }
+
     protected function getUserFromJwtToken($idToken)
     {
+        $this->observedLeeway = JWT::$leeway;
+
+        if ($this->verificationFailure) {
+            throw $this->verificationFailure;
+        }
+
         return $this->claims;
     }
 }

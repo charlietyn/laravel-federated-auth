@@ -158,6 +158,24 @@ Socialite-based providers such as Google/Facebook keep their standard Socialite 
 
 OIDC-capable providers receive a transaction-specific nonce in the authorization request. When an `id_token` is returned, the adapter validates that the token nonce matches the stored transaction nonce.
 
+## Provider clock skew
+
+Google ID tokens contain temporal claims such as `iat`, `nbf` and `exp`. A
+correct token can arrive a few seconds before the application server believes
+it is valid when the two clocks are not perfectly aligned. Configure the small
+tolerance with:
+
+```env
+FEDERATED_AUTH_OIDC_CLOCK_SKEW_SECONDS=60
+```
+
+The Google PKCE adapter applies this value only during provider token
+validation and restores the JWT library's previous global leeway afterwards.
+An `iat`/`nbf` failure is exposed as
+`ProviderTokenNotYetValidException`; an expired token is exposed as
+`ProviderTokenExpiredException`. Synchronizing the operating-system clock is
+still required; increasing the tolerance is not a substitute for NTP.
+
 ## Redirect URI guard
 
 If `FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS` is configured, dynamic redirect URIs are only accepted when the host is explicitly listed.

@@ -169,6 +169,11 @@ return [
         'oidc' => [
             'nonce_enabled' => env('FEDERATED_AUTH_OIDC_NONCE_ENABLED', true),
             'require_azp_when_multiple_audiences' => true,
+
+            // Small tolerance for normal clock skew between an identity
+            // provider and the application server. It applies to the provider
+            // token's iat, nbf and exp claims; zero restores strict comparison.
+            'clock_skew_seconds' => env('FEDERATED_AUTH_OIDC_CLOCK_SKEW_SECONDS', 60),
         ],
 
         'redirects' => [
@@ -208,6 +213,9 @@ return [
 
         // Email addresses are personal data; opt in explicitly.
         'include_email' => env('FEDERATED_AUTH_LOG_INCLUDE_EMAIL', false),
+
+        // Sanitized exception messages, including wrapped provider causes.
+        'exception_chain_limit' => env('FEDERATED_AUTH_LOG_EXCEPTION_CHAIN_LIMIT', 5),
     ],
 
     /*

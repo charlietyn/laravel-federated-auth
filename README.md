@@ -293,11 +293,19 @@ FEDERATED_AUTH_OAUTH_STATE_TTL_SECONDS=300
 FEDERATED_AUTH_OAUTH_STATE_BIND_USER_AGENT=true
 FEDERATED_AUTH_PKCE_ENABLED=true
 FEDERATED_AUTH_OIDC_NONCE_ENABLED=true
+FEDERATED_AUTH_OIDC_CLOCK_SKEW_SECONDS=60
 FEDERATED_AUTH_ALLOWED_REDIRECT_HOSTS=api.example.com,app.example.com
 FEDERATED_AUTH_ALLOW_HTTP_LOCALHOST_REDIRECTS=false
 ```
 
 `FEDERATED_AUTH_PKCE_ENABLED` and `FEDERATED_AUTH_OIDC_NONCE_ENABLED` affect OIDC-style adapters that control the code flow. Socialite-backed providers such as Google and Facebook still receive package-managed `state`, but package-level nonce/PKCE is not applied there unless a dedicated adapter controls that provider flow.
+
+`FEDERATED_AUTH_OIDC_CLOCK_SKEW_SECONDS` is a small tolerance for normal clock
+differences between the application server and the identity provider. The
+Google PKCE adapter applies it only while validating the provider `id_token`
+and restores the JWT library's previous global leeway afterwards. Keep the
+default small and synchronize the server clock; do not use a large value to
+hide a clock that is out of sync.
 
 ---
 
@@ -380,12 +388,16 @@ upgrading never starts writing to your log unasked:
 FEDERATED_AUTH_LOGGING_ENABLED=true
 FEDERATED_AUTH_LOG_CHANNEL=stack        # optional; defaults to your default channel
 FEDERATED_AUTH_LOG_INCLUDE_EMAIL=false  # email addresses are personal data
+FEDERATED_AUTH_LOG_EXCEPTION_CHAIN_LIMIT=5
 ```
 
 It records the provider, channel, user type, tenant, state digest and outcome.
-It never records the raw state, authorization codes, tokens, client secrets or
-exception messages (provider errors routinely embed a code fragment). If you
-want a different shape, leave it off and listen to the events yourself.
+It never records the raw state, authorization codes, tokens or client secrets.
+For failed logins it records the exception class and a bounded exception chain
+so the exact technical cause remains diagnosable; every message is scrubbed
+before it reaches the logger because provider errors routinely embed a code or
+token fragment. If you want a different shape, leave it off and listen to the
+events yourself.
 
 ### Persisting errors
 

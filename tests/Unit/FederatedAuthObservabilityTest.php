@@ -2,6 +2,7 @@
 
 namespace Ronu\LaravelFederatedAuth\Tests\Unit;
 
+use Firebase\JWT\BeforeValidException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Mockery;
@@ -11,6 +12,7 @@ use Ronu\LaravelFederatedAuth\DTO\AuthContext;
 use Ronu\LaravelFederatedAuth\Events\ExternalLoginFailed;
 use Ronu\LaravelFederatedAuth\Events\ExternalRedirectIssued;
 use Ronu\LaravelFederatedAuth\Exceptions\InvalidProviderTokenException;
+use Ronu\LaravelFederatedAuth\Exceptions\ProviderTokenNotYetValidException;
 use Ronu\LaravelFederatedAuth\Services\FederatedAuthBroker;
 use Ronu\LaravelFederatedAuth\Services\Logging\FederatedAuthLogSubscriber;
 use Ronu\LaravelFederatedAuth\Support\OAuthSecurity;
@@ -130,6 +132,40 @@ class FederatedAuthObservabilityTest extends TestCase
         $serialized = json_encode($captured[0]);
         $this->assertStringNotContainsString('the-real-state', $serialized);
         $this->assertStringContainsString(OAuthSecurity::stateDigest('the-real-state'), $serialized);
+    }
+
+    public function test_failed_login_logs_the_sanitized_exception_chain(): void
+    {
+        $context = new AuthContext(
+            provider: 'google',
+            request: Request::create('/auth/google/callback', 'GET', [
+                'code' => 'secret-authorization-code',
+            ]),
+            channel: 'admin',
+        );
+        $inner = new BeforeValidException(
+            'Cannot handle token with iat prior to 2026-08-12T22:00:15+00:00 code=secret-authorization-code'
+        );
+        $outer = new ProviderTokenNotYetValidException(
+            'Google ID token is not valid yet. Check the application server clock.',
+            previous: $inner,
+        );
+        $captured = [];
+        $this->app['log']->listen(function ($message) use (&$captured): void {
+            $captured[] = $message->context;
+        });
+
+        (new FederatedAuthLogSubscriber)->handleLoginFailed(
+            new ExternalLoginFailed(null, null, $context, $outer),
+        );
+
+        $this->assertCount(1, $captured);
+        $chain = $captured[0]['exception_chain'];
+        $this->assertSame(ProviderTokenNotYetValidException::class, $chain[0]['exception']);
+        $this->assertSame(BeforeValidException::class, $chain[1]['exception']);
+        $this->assertStringContainsString('2026-08-12T22:00:15+00:00', $chain[1]['message']);
+        $this->assertStringNotContainsString('secret-authorization-code', json_encode($chain));
+        $this->assertStringContainsString('code=[REDACTED]', $chain[1]['message']);
     }
 
     protected function tearDown(): void

@@ -10,6 +10,8 @@ use Ronu\LaravelFederatedAuth\Events\ExternalLoginSucceeded;
 use Ronu\LaravelFederatedAuth\Events\ExternalRedirectIssued;
 use Ronu\LaravelFederatedAuth\Events\ExternalUserProvisioned;
 use Ronu\LaravelFederatedAuth\Support\OAuthSecurity;
+use Ronu\LaravelFederatedAuth\Support\SensitiveDataScrubber;
+use Throwable;
 
 /**
  * Optional structured trace of every federated authentication flow.
@@ -51,10 +53,12 @@ class FederatedAuthLogSubscriber
 
     public function handleLoginFailed(ExternalLoginFailed $event): void
     {
-        // The exception CLASS is recorded, never its message: provider errors
-        // routinely embed the authorization code or a token fragment.
         $this->write('warning', 'login_failed', $event->context, [
             'exception' => $event->exception::class,
+            // Messages are useful for diagnosing provider failures, but may
+            // contain codes, callback query strings or token fragments. Every
+            // level is scrubbed before it reaches the host log.
+            'exception_chain' => $this->exceptionChain($event->exception),
             'email' => $this->email($event->identity?->email),
         ]);
     }
@@ -115,5 +119,24 @@ class FederatedAuthLogSubscriber
     private function email(?string $email): ?string
     {
         return (bool) config('federated-auth.logging.include_email', false) ? $email : null;
+    }
+
+    /**
+     * @return array<int, array{exception: class-string, message: string}>
+     */
+    private function exceptionChain(Throwable $exception): array
+    {
+        $chain = [];
+        $limit = max(1, (int) config('federated-auth.logging.exception_chain_limit', 5));
+
+        do {
+            $chain[] = [
+                'exception' => $exception::class,
+                'message' => SensitiveDataScrubber::scrubString($exception->getMessage()),
+            ];
+            $exception = $exception->getPrevious();
+        } while ($exception !== null && count($chain) < $limit);
+
+        return $chain;
     }
 }
