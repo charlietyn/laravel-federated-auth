@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`ronu/laravel-federated-auth` is a **standalone Composer package** (not an app) — a contract-first Laravel 11/12 bridge for external identity providers (Google, Facebook, Apple, Keycloak, generic OIDC). It deliberately owns no user model, schema, guard, token system, or tenancy strategy; the host application supplies those via interface bindings. The guiding rule: **external providers authenticate identity; the host app owns authorization.**
+`ronu/laravel-federated-auth` is a **standalone Composer package** (not an app) — a contract-first Laravel 11/12/13 bridge for external identity providers (Google, Facebook, Apple, Keycloak, generic OIDC). It deliberately owns no user model, schema, guard, token system, or tenancy strategy; the host application supplies those via interface bindings. The guiding rule: **external providers authenticate identity; the host app owns authorization.**
 
 Namespace: `Ronu\LaravelFederatedAuth\` → `src/`. Tests: `Ronu\LaravelFederatedAuth\Tests\` → `tests/`.
 

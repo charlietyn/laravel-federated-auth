@@ -15,11 +15,11 @@
   ],
   "require": {
     "php": "^8.2",
-    "illuminate/support": "^11.0|^12.0",
-    "illuminate/contracts": "^11.0|^12.0",
-    "illuminate/http": "^11.0|^12.0",
-    "illuminate/routing": "^11.0|^12.0",
-    "illuminate/database": "^11.0|^12.0",
+    "illuminate/support": "^11.0|^12.0|^13.0",
+    "illuminate/contracts": "^11.0|^12.0|^13.0",
+    "illuminate/http": "^11.0|^12.0|^13.0",
+    "illuminate/routing": "^11.0|^12.0|^13.0",
+    "illuminate/database": "^11.0|^12.0|^13.0",
     "laravel/socialite": "^5.24.1",
     "guzzlehttp/guzzle": "^7.15.2",
     "firebase/php-jwt": "^7.0"
@@ -30,8 +30,8 @@
     "php-open-source-saver/jwt-auth": "Required by the JwtAuthTokenIssuer and by the app-context integration."
   },
   "require-dev": {
-    "orchestra/testbench": "^9.0|^10.0",
-    "phpunit/phpunit": "^11.0",
+    "orchestra/testbench": "^9.0|^10.0|^11.0",
+    "phpunit/phpunit": "^11.0|^12.0",
     "laravel/pint": "^1.18"
   },
   "autoload": {
