@@ -1,12 +1,12 @@
 # Laravel Federated Auth
 
 <p align="center">
-  <strong>Production-ready federated authentication bridge for Laravel 11/12, OAuth2, OpenID Connect, Socialite, Apple, Keycloak and custom multi-tenant user systems.</strong>
+  <strong>Production-ready federated authentication bridge for Laravel 11/12/13, OAuth2, OpenID Connect, Socialite, Apple, Keycloak and custom multi-tenant user systems.</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/PHP-%5E8.2-777BB4?style=flat-square&logo=php" alt="PHP 8.2+">
-  <img src="https://img.shields.io/badge/Laravel-11%20%7C%2012-FF2D20?style=flat-square&logo=laravel" alt="Laravel 11 or 12">
+  <img src="https://img.shields.io/badge/Laravel-11%20%7C%2012%20%7C%2013-FF2D20?style=flat-square&logo=laravel" alt="Laravel 11, 12 or 13">
   <img src="https://img.shields.io/badge/OAuth2-state%20hardened-blue?style=flat-square" alt="OAuth2 state hardened">
   <img src="https://img.shields.io/badge/OIDC-nonce%20%2B%20PKCE-0A7EA4?style=flat-square" alt="OIDC nonce and PKCE">
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License">
@@ -128,10 +128,13 @@ php artisan vendor:publish --tag=federated-auth-docs
 | Dependency | Version |
 |---|---:|
 | PHP | `^8.2` |
-| Laravel / Illuminate | `^11.0` or `^12.0` |
+| Laravel / Illuminate | `^11.0`, `^12.0` or `^13.0` |
 | Laravel Socialite | `^5.24.1` |
 | Guzzle | `^7.15.2` |
 | firebase/php-jwt | `^7.0` |
+
+Laravel 13 applications require PHP `^8.3`, while the package remains installable
+on PHP `^8.2` when used with Laravel 11 or 12.
 
 ---
 

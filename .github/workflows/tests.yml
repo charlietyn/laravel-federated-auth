@@ -13,7 +13,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.2', '8.3']
+        include:
+          - php-version: '8.2'
+            testbench-version: '^9.0'
+            phpunit-version: '^11.0'
+          - php-version: '8.2'
+            testbench-version: '^10.0'
+            phpunit-version: '^11.0'
+          - php-version: '8.3'
+            testbench-version: '^11.0'
+            phpunit-version: '^12.0'
 
     steps:
       - name: Checkout
@@ -25,8 +34,14 @@ jobs:
           php-version: ${{ matrix.php-version }}
           coverage: none
 
+      - name: Select Laravel test matrix dependencies
+        run: >-
+          composer require --dev --no-update
+          "orchestra/testbench:${{ matrix.testbench-version }}"
+          "phpunit/phpunit:${{ matrix.phpunit-version }}"
+
       - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
+        run: composer update --no-interaction --no-progress --prefer-dist --with-all-dependencies
 
       - name: Run QA
         run: composer qa
